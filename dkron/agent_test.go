@@ -129,6 +129,7 @@ func Test_getTargetNodes(t *testing.T) {
 
 	c := DefaultConfig()
 	c.BindAddr = a1Addr
+	c.StartJoin = []string{a2Addr}
 	c.NodeName = "test1"
 	c.Server = true
 	c.LogLevel = logLevel
