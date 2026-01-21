@@ -7,14 +7,14 @@
   become_method: sudo
 
   vars:
-    version: 4.0.9-beta1
+    version: 4.0.9
 
   tasks:
     - name: Copy package
       copy:
         src: ../../dist/dkron_{{ version }}_linux_amd64.deb
         dest: /tmp
-    
+
     - name: Install package
       apt:
         deb: /tmp/dkron_{{ version }}_linux_amd64.deb
@@ -26,7 +26,7 @@
         group: root
         mode: 755
         state: directory
-    
+
     ### File descriptor and memory tweaks
 
     - name: Increase sysctl open files system wide
@@ -38,11 +38,11 @@
     - name: Increasing number of open files
       lineinfile: dest=/etc/systemd/system.conf regexp='^DefaultLimitNOFILE=65535' line='DefaultLimitNOFILE=65535' state=present
       tags: performance
-    
+
     - name: Increasing number of open files in service
       lineinfile: dest=/lib/systemd/system/dkron.service regexp='^KillSignal=SIGTERM\n^LimitNOFILE=65535' line='LimitNOFILE=65535' state=present
       tags: performance_b
-    
+
     ### Network performance tweaks
 
     - name: Set ARP GC entry point at 0
