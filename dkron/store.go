@@ -28,6 +28,7 @@ const (
 
 	jobsPrefix       = "jobs"
 	executionsPrefix = "executions"
+	statsPrefix      = "stats"
 )
 
 var (
@@ -267,6 +268,7 @@ func (s *Store) SetExecutionDone(ctx context.Context, execution *Execution) (boo
 	ctx, span := s.tracer.Start(ctx, "buntdb.set.execution_done")
 	defer span.End()
 
+	var success bool
 	err := s.db.Update(func(tx *buntdb.Tx) error {
 		// Load the job from the store
 		var pbj dkronpb.Job
@@ -287,6 +289,7 @@ func (s *Store) SetExecutionDone(ctx context.Context, execution *Execution) (boo
 			return err
 		}
 
+		success = pbe.Success
 		if pbe.Success {
 			pbj.LastSuccess.HasValue = true
 			pbj.LastSuccess.Time = pbe.FinishedAt
@@ -309,6 +312,12 @@ func (s *Store) SetExecutionDone(ctx context.Context, execution *Execution) (boo
 
 		if err := s.setJobTxFunc(&pbj)(tx); err != nil {
 			return err
+		}
+
+		// Update execution statistics for the day
+		if err := s.incrementStatTxFunc(execution.FinishedAt, success)(tx); err != nil {
+			s.logger.WithError(err).Warn("store: Failed to update execution stats")
+			// Don't fail the whole operation if stats update fails
 		}
 
 		return nil
@@ -879,4 +888,109 @@ func trimDirectoryKey(key []byte) []byte {
 
 func isDirectoryKey(key []byte) bool {
 	return len(key) > 0 && key[len(key)-1] == ':'
+}
+
+// formatStatDate formats a time to the date key format used in stats storage
+func formatStatDate(t time.Time) string {
+	return t.UTC().Truncate(24 * time.Hour).Format("2006-01-02")
+}
+
+// incrementStatTxFunc returns a transaction function to increment execution stats
+func (s *Store) incrementStatTxFunc(date time.Time, success bool) func(tx *buntdb.Tx) error {
+	return func(tx *buntdb.Tx) error {
+		dateKey := formatStatDate(date)
+		key := fmt.Sprintf("%s:%s", statsPrefix, dateKey)
+
+		var stat ExecutionStat
+
+		item, err := tx.Get(key)
+		if err != nil && err != buntdb.ErrNotFound {
+			return err
+		}
+
+		if err == buntdb.ErrNotFound {
+			// Create new stat entry
+			stat = ExecutionStat{
+				Date:         date.UTC().Truncate(24 * time.Hour),
+				SuccessCount: 0,
+				FailedCount:  0,
+			}
+		} else {
+			// Parse existing stat
+			if err := json.Unmarshal([]byte(item), &stat); err != nil {
+				return err
+			}
+		}
+
+		// Increment the appropriate counter
+		if success {
+			stat.SuccessCount++
+		} else {
+			stat.FailedCount++
+		}
+
+		// Save the updated stat
+		data, err := json.Marshal(stat)
+		if err != nil {
+			return err
+		}
+
+		_, _, err = tx.Set(key, string(data), nil)
+		return err
+	}
+}
+
+// IncrementExecutionStat increments the execution statistics for a given date
+func (s *Store) IncrementExecutionStat(ctx context.Context, date time.Time, success bool) error {
+	_, span := s.tracer.Start(ctx, "buntdb.increment.execution_stat")
+	defer span.End()
+
+	return s.db.Update(s.incrementStatTxFunc(date, success))
+}
+
+// GetExecutionStats retrieves execution statistics for the specified number of days
+func (s *Store) GetExecutionStats(ctx context.Context, days int) (*ExecutionStats, error) {
+	_, span := s.tracer.Start(ctx, "buntdb.get.execution_stats")
+	defer span.End()
+
+	if days <= 0 {
+		days = 30 // Default to 30 days
+	}
+
+	stats := &ExecutionStats{
+		Stats: make([]ExecutionStat, 0, days),
+	}
+
+	// Generate date keys for the requested period
+	today := time.Now().UTC().Truncate(24 * time.Hour)
+
+	err := s.db.View(func(tx *buntdb.Tx) error {
+		for i := days - 1; i >= 0; i-- {
+			date := today.AddDate(0, 0, -i)
+			dateKey := formatStatDate(date)
+			key := fmt.Sprintf("%s:%s", statsPrefix, dateKey)
+
+			item, err := tx.Get(key)
+			if err == buntdb.ErrNotFound {
+				// No stats for this day, add zero entry
+				stats.Stats = append(stats.Stats, ExecutionStat{
+					Date:         date,
+					SuccessCount: 0,
+					FailedCount:  0,
+				})
+				continue
+			} else if err != nil {
+				return err
+			}
+
+			var stat ExecutionStat
+			if err := json.Unmarshal([]byte(item), &stat); err != nil {
+				return err
+			}
+			stats.Stats = append(stats.Stats, stat)
+		}
+		return nil
+	})
+
+	return stats, err
 }

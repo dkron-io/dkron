@@ -6,6 +6,7 @@ import FailedJobs from './FailedJobs';
 import SuccessfulJobs from './SuccessfulJobs';
 import UntriggeredJobs from './UntriggeredJobs';
 import TotalJobs from './TotalJobs';
+import ExecutionStatsChart from './ExecutionStatsChart';
 
 let fakeProps = {
     basePath: "/members",
@@ -53,6 +54,9 @@ const Dashboard = () => (
                 </div>
             </CardContent>
         </Card>
+        <div style={styles.singleCol}>
+            <ExecutionStatsChart />
+        </div>
         <Card>
             <CardHeader title="Nodes" />
             <CardContent>

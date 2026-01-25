@@ -113,6 +113,8 @@ func (h *HTTPTransport) APIRoutes(r *gin.RouterGroup, middleware ...gin.HandlerF
 	v1.POST("/pause", h.pauseHandler)
 	v1.POST("/unpause", h.unpauseHandler)
 
+	v1.GET("/stats", h.statsHandler)
+
 	v1.POST("/jobs", h.jobCreateOrUpdateHandler)
 	v1.PATCH("/jobs", h.jobCreateOrUpdateHandler)
 	// Place fallback routes last
@@ -546,4 +548,21 @@ func (h *HTTPTransport) unpauseHandler(c *gin.Context) {
 func (h *HTTPTransport) pauseStatusHandler(c *gin.Context) {
 	paused := h.agent.IsNewJobsPaused()
 	renderJSON(c, http.StatusOK, gin.H{"paused": paused})
+}
+
+func (h *HTTPTransport) statsHandler(c *gin.Context) {
+	daysStr := c.DefaultQuery("days", "30")
+	days, err := strconv.Atoi(daysStr)
+	if err != nil {
+		days = 30
+	}
+
+	stats, err := h.agent.Store.GetExecutionStats(c.Request.Context(), days)
+	if err != nil {
+		h.logger.WithError(err).Error("api: Unable to get execution stats")
+		c.AbortWithStatus(http.StatusInternalServerError)
+		return
+	}
+
+	renderJSON(c, http.StatusOK, stats)
 }
