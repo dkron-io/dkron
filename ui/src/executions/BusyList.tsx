@@ -8,6 +8,8 @@ import {
 import { Box, Typography } from "@mui/material";
 import PlayCircleOutlineIcon from "@mui/icons-material/PlayCircleOutline";
 
+const selectRowDisabled = () => false;
+
 export const OutputPanel = () => {
   const record = useRecordContext();
   return (
@@ -71,7 +73,7 @@ export const BusyList = (props: any) => (
     >
       <Datagrid
         rowClick="expand"
-        isRowSelectable={() => false}
+        isRowSelectable={selectRowDisabled}
         expand={<OutputPanel />}
         sx={{
           "& .RaDatagrid-headerCell": {

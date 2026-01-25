@@ -1,8 +1,6 @@
-import { forwardRef } from 'react';
 import { styled } from '@mui/material/styles';
 import { AppBar, UserMenu, MenuItemLink, Logout, Link } from 'react-admin';
 import { Box, Typography } from '@mui/material';
-import SettingsIcon from '@mui/icons-material/Settings';
 import BookIcon from '@mui/icons-material/Book';
 import GitHubIcon from '@mui/icons-material/GitHub';
 import Clock from './Clock';
@@ -36,20 +34,6 @@ const StyledAppBar = styled(AppBar)(({ theme }) => ({
         filter: 'brightness(0) invert(1)',
     },
 }));
-
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-const ConfigurationMenu = forwardRef<any, any>((props, ref) => {
-    return (
-        <MenuItemLink
-            ref={ref}
-            to="/settings"
-            primaryText='Settings'
-            leftIcon={<SettingsIcon />}
-            onClick={props.onClick}
-        />
-    );
-});
-ConfigurationMenu.displayName = 'ConfigurationMenu';
 
 const CustomUserMenu = (props: any) => (
     <UserMenu {...props}>

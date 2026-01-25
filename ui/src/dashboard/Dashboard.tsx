@@ -8,6 +8,8 @@ import UntriggeredJobs from './UntriggeredJobs';
 import TotalJobs from './TotalJobs';
 import DnsIcon from '@mui/icons-material/Dns';
 
+const selectRowDisabled = () => false;
+
 const fakeProps = {
     basePath: "/members",
     count: 10,
@@ -113,7 +115,7 @@ const Dashboard = () => {
                 <CardContent sx={{ p: 0, '&:last-child': { pb: 0 } }}>
                     <List {...fakeProps}>
                         <Datagrid 
-                            isRowSelectable={() => false}
+                            isRowSelectable={selectRowDisabled}
                             sx={{
                                 '& .RaDatagrid-headerCell': {
                                     backgroundColor: '#f7fafc',
