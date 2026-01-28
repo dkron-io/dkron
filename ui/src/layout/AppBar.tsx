@@ -1,9 +1,8 @@
-import { forwardRef } from 'react';
 import { styled } from '@mui/material/styles';
 import { AppBar, UserMenu, MenuItemLink, Logout, Link } from 'react-admin';
-import Typography from '@mui/material/Typography';
-import SettingsIcon from '@mui/icons-material/Settings';
+import { Box, Typography } from '@mui/material';
 import BookIcon from '@mui/icons-material/Book';
+import GitHubIcon from '@mui/icons-material/GitHub';
 import Clock from './Clock';
 
 import logo from '../images/dkron-logo.png';
@@ -16,7 +15,11 @@ const classes = {
     logo: `${PREFIX}-logo`
 };
 
-const StyledAppBar = styled(AppBar)({
+const StyledAppBar = styled(AppBar)(({ theme }) => ({
+    backgroundColor: theme.palette.primary.main,
+    '& .RaAppBar-toolbar': {
+        minHeight: 64,
+    },
     [`& .${classes.title}`]: {
         flex: 1,
         textOverflow: 'ellipsis',
@@ -27,30 +30,23 @@ const StyledAppBar = styled(AppBar)({
         flex: 1,
     },
     [`& .${classes.logo}`]: {
-        maxWidth: "125px"
+        maxWidth: "110px",
+        filter: 'brightness(0) invert(1)',
     },
-});
-
-const ConfigurationMenu = forwardRef<any, any>((props, ref) => {
-    return (
-        <MenuItemLink
-            ref={ref}
-            to="/settings"
-            primaryText='Settings'
-            leftIcon={<SettingsIcon />}
-            onClick={props.onClick}
-        />
-    );
-});
+}));
 
 const CustomUserMenu = (props: any) => (
     <UserMenu {...props}>
         <MenuItemLink
             to="https://dkron.io/docs/basics/getting-started"
-            primaryText='Docs'
+            primaryText='Documentation'
             leftIcon={<BookIcon />}
         />
-        {/* <ConfigurationMenu /> */}
+        <MenuItemLink
+            to="https://github.com/distribworks/dkron"
+            primaryText='GitHub'
+            leftIcon={<GitHubIcon />}
+        />
         <Logout />
     </UserMenu>
 );
@@ -58,20 +54,38 @@ const CustomUserMenu = (props: any) => (
 const CustomAppBar = (props: any) => {
 
     return (
-        <StyledAppBar {...props} elevation={1} userMenu={<CustomUserMenu />}>
+        <StyledAppBar 
+            {...props} 
+            elevation={0} 
+            userMenu={<CustomUserMenu />}
+            sx={{
+                borderBottom: '1px solid',
+                borderColor: 'rgba(255, 255, 255, 0.1)',
+            }}
+        >
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                <Link to="/" style={{ display: 'flex', alignItems: 'center' }}>
+                    <img src={logo} alt="Dkron" className={classes.logo} />
+                </Link>
+            </Box>
             <Typography
                 variant="h6"
                 color="inherit"
                 className={classes.title}
                 id="react-admin-title"
+                sx={{ ml: 2 }}
             />
-            <div>
-                <Link to="/" color="inherit" underline="none">
-                    <img src={logo} alt="logo" className={classes.logo} />
-                </Link>
-            </div>
             <span className={classes.spacer} />
-            <Clock />
+            <Box 
+                sx={{ 
+                    display: 'flex', 
+                    alignItems: 'center', 
+                    gap: 2,
+                    mr: 1,
+                }}
+            >
+                <Clock />
+            </Box>
         </StyledAppBar>
     );
 };

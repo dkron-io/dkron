@@ -1,4 +1,3 @@
-import * as React from 'react';
 import { FC } from 'react';
 import Icon from '@mui/icons-material/NewReleases';
 
@@ -15,6 +14,7 @@ const UntriggeredJobs: FC<Props> = ({ value }) => {
             icon={Icon}
             title='Untriggered Jobs'
             subtitle={value}
+            color="#d69e2e"
         />
     );
 };

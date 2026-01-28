@@ -1,4 +1,3 @@
-import * as React from 'react';
 import { FC } from 'react';
 import Icon from '@mui/icons-material/ThumbDown';
 
@@ -15,6 +14,7 @@ const FailedJobs: FC<Props> = ({ value }) => {
             icon={Icon}
             title='Failed Jobs'
             subtitle={value}
+            color="#e53e3e"
         />
     );
 };

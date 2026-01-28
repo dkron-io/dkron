@@ -1,4 +1,3 @@
-import * as React from 'react';
 import { FC } from 'react';
 import Icon from '@mui/icons-material/ThumbUp';
 
@@ -15,6 +14,7 @@ const SuccessfulJobs: FC<Props> = ({ value }) => {
             icon={Icon}
             title='Successful Jobs'
             subtitle={value}
+            color="#38a169"
         />
     );
 };
