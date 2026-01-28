@@ -37,8 +37,8 @@ teardown() {
     # Wait for job to be persisted and added to scheduler
     sleep 2
     
-    # Trigger manual execution via the /run endpoint
-    response=$(api_post "/v1/jobs/${TEST_JOB_NAME}/run" "")
+    # Trigger manual execution via the bare endpoint
+    response=$(api_post "/v1/jobs/${TEST_JOB_NAME}" "")
     status=$(get_status_code "$response")
     
     # API returns 200 when job is run
