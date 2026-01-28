@@ -58,7 +58,7 @@ clean:
 	GOBIN=`pwd` go clean -i ./builtin/...
 	GOBIN=`pwd` go clean
 
-.PHONY: docs apidoc test ui updatetestcert test-email e2e e2e-quick
+.PHONY: docs apidoc test ui updatetestcert test-email e2e e2e-quick e2e-debug
 docs:
 	# scripts/run doc --dir website/docs/cli
 	cd website; pnpm build --out-dir ../public
