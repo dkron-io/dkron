@@ -515,6 +515,35 @@ paths:
                     type: boolean
                     description: Whether new job submissions are currently paused
 
+  /stats:
+    get:
+      tags:
+        - statistics
+      description: |
+        Retrieves execution statistics for a specified number of days.
+      operationId: getExecutionStats
+      parameters:
+        - name: days
+          in: query
+          description: "Number of days of statistics to retrieve (default: 30, max: 365)"
+          required: false
+          style: form
+          explode: true
+          schema:
+            type: integer
+            default: 30
+            minimum: 1
+            maximum: 365
+      responses:
+        "200":
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/execution_stats'
+        "500":
+          description: Internal error
+
   /acl/policies/{name}:
     get:
       tags:
@@ -888,6 +917,35 @@ components:
           description: Policy rules
           examples:
             - PolicyJSON
+    execution_stat:
+      type: object
+      description: Execution statistics for a specific date
+      properties:
+        date:
+          type: string
+          format: date-time
+          description: The date for which this statistic is recorded (truncated to day)
+          examples:
+            - "2026-01-28T00:00:00Z"
+        success_count:
+          type: integer
+          description: Number of successful executions on this date
+          examples:
+            - 42
+        failed_count:
+          type: integer
+          description: Number of failed executions on this date
+          examples:
+            - 3
+    execution_stats:
+      type: object
+      description: Collection of execution statistics over a time period
+      properties:
+        stats:
+          type: array
+          description: Array of daily execution statistics
+          items:
+            $ref: '#/components/schemas/execution_stat'
   securitySchemes:
     TokenAuth:
       type: apiKey
