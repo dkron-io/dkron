@@ -32,7 +32,7 @@ interface ChartDataPoint {
 
 const dateFormatter = (dateStr: string): string => {
     const date = new Date(dateStr);
-    return date.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+    return date.toLocaleDateString(undefined, { month: 'short', day: 'numeric', timeZone: 'UTC' });
 };
 
 const ExecutionStatsChart = () => {
