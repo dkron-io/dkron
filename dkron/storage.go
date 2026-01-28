@@ -3,6 +3,7 @@ package dkron
 import (
 	"context"
 	"io"
+	"time"
 )
 
 // Storage is the interface that should be used by any
@@ -25,4 +26,8 @@ type Storage interface {
 	Shutdown() error
 	Snapshot(w io.WriteCloser) error
 	Restore(r io.ReadCloser) error
+	// GetExecutionStats retrieves execution statistics for the specified number of days
+	GetExecutionStats(ctx context.Context, days int) (*ExecutionStats, error)
+	// IncrementExecutionStat increments the execution statistics for a given date
+	IncrementExecutionStat(ctx context.Context, date time.Time, success bool) error
 }

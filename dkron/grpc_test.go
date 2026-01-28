@@ -149,7 +149,7 @@ func TestGRPCExecutionDone(t *testing.T) {
 	t.Run("Test job retry with broken stream error", func(t *testing.T) {
 		// Use the actual error format that would be returned when a broken stream occurs
 		brokenStreamErrorMsg := ErrBrokenStream.Error() + ": rpc error: code = Internal desc = grpc: error while marshaling"
-		
+
 		testJob.Name = "test-retry"
 		testJob.Schedule = "0 * * * * *" // Every minute at 0 seconds (6-field format)
 		testJob.Retries = 2
