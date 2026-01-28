@@ -6,11 +6,13 @@ const CustomSidebar = styled(Sidebar)(({ theme }) => ({
     '& .RaSidebar-fixed': {
         backgroundColor: theme.palette.primary.main,
         color: '#ffffff',
+        paddingTop: theme.spacing(2),
     },
     '& .MuiDrawer-paper': {
         backgroundColor: theme.palette.primary.main,
         color: '#ffffff',
         borderRight: 'none',
+        paddingTop: theme.spacing(2),
     },
     '& .RaMenuItemLink-active': {
         backgroundColor: 'rgba(255, 255, 255, 0.15)',

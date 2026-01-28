@@ -27,6 +27,7 @@ const JobFilter = (props: any) => (
             label="Search" 
             source="q" 
             alwaysOn 
+            sx={{ ml: 2 }}
         />
         <SelectInput 
             source="status" 
@@ -138,7 +139,6 @@ const JobList = (props: any) => {
                     '& .RaList-main': {
                         boxShadow: '0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06)',
                         borderRadius: 3,
-                        overflow: 'hidden',
                         border: '1px solid #e2e8f0',
                     },
                     '& .RaList-content': {

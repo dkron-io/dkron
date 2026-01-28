@@ -71,6 +71,11 @@ const Dashboard = () => {
                 <UntriggeredJobs value={window.DKRON_UNTRIGGERED_JOBS || "0"} />
             </Box>
 
+            {/* Execution Stats Chart */}
+            <Box sx={{ mb: 4 }}>
+                <ExecutionStatsChart />
+            </Box>
+
             {/* Nodes Section */}
             <Card>
                 <Box 
