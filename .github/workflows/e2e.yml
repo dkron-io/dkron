@@ -1,0 +1,67 @@
+name: E2E Tests
+
+on:
+  push:
+    branches:
+      - "**"
+  pull_request:
+    paths-ignore:
+      - "**.md"
+      - "website/**"
+      - "docs/**"
+      - "examples/**"
+
+jobs:
+  e2e-tests:
+    name: E2E Tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: read
+
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: 1.23.1
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y bats jq curl
+
+      - name: Verify dependencies
+        run: |
+          echo "Checking installed tools..."
+          bats --version
+          jq --version
+          curl --version
+          docker --version
+          docker compose version
+
+      - name: Run E2E tests
+        run: |
+          make e2e
+        env:
+          DKRON_API_URL: http://localhost:8080
+          STARTUP_TIMEOUT: 120
+
+      - name: Collect logs on failure
+        if: failure()
+        run: |
+          echo "=== Docker containers ==="
+          docker ps -a
+          echo ""
+          echo "=== Dkron leader logs ==="
+          docker compose -f e2e/docker-compose.e2e.yml -p dkron-e2e logs dkron-leader || true
+          echo ""
+          echo "=== Docker compose status ==="
+          docker compose -f e2e/docker-compose.e2e.yml -p dkron-e2e ps || true
+
+      - name: Cleanup
+        if: always()
+        run: |
+          docker compose -f e2e/docker-compose.e2e.yml -p dkron-e2e down -v --remove-orphans || true
