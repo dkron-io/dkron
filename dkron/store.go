@@ -956,6 +956,10 @@ func (s *Store) GetExecutionStats(ctx context.Context, days int) (*ExecutionStat
 	if days <= 0 {
 		days = 30 // Default to 30 days
 	}
+	const maxDays = 365
+	if days > maxDays {
+		days = maxDays
+	}
 
 	stats := &ExecutionStats{
 		Stats: make([]ExecutionStat, 0, days),
@@ -993,4 +997,5 @@ func (s *Store) GetExecutionStats(ctx context.Context, days int) (*ExecutionStat
 	})
 
 	return stats, err
+}
 }
