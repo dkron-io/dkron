@@ -58,7 +58,7 @@ clean:
 	GOBIN=`pwd` go clean -i ./builtin/...
 	GOBIN=`pwd` go clean
 
-.PHONY: docs apidoc test ui updatetestcert test-email e2e e2e-quick e2e-debug
+.PHONY: docs apidoc test ui updatetestcert test-email
 docs:
 	# scripts/run doc --dir website/docs/cli
 	cd website; pnpm build --out-dir ../public
@@ -78,6 +78,21 @@ test-email:
 	@go test -v -run TestNotifier_sendExecutionEmail ./dkron
 	@echo "Tests complete. View captured emails at http://localhost:8025"
 	@echo "To stop Mailpit, run: docker stop dkron-mailpit"
+
+# E2E tests - run full e2e test suite
+e2e:
+	@echo "Running E2E tests..."
+	./e2e/run-e2e-tests.sh
+
+# E2E tests - run without rebuild (faster for iterative testing)
+e2e-quick:
+	@echo "Running E2E tests (no build)..."
+	./e2e/run-e2e-tests.sh --no-build
+
+# E2E tests - keep cluster running after tests for debugging
+e2e-debug:
+	@echo "Running E2E tests (keeping cluster running)..."
+	./e2e/run-e2e-tests.sh --keep
 
 updatetestcert:
 	wget https://badssl.com/certs/badssl.com-client.p12 -q -O badssl.com-client.p12
@@ -120,18 +135,3 @@ main: dkron/ui-dist types/dkron.pb.go types/executor.pb.go *.go */*.go */*/*.go 
 	GOBIN=`pwd` go install ./builtin/...
 	go mod tidy
 	go build -tags=hashicorpmetrics main.go
-
-# E2E tests - run full e2e test suite
-e2e:
-	@echo "Running E2E tests..."
-	./e2e/run-e2e-tests.sh
-
-# E2E tests - run without rebuild (faster for iterative testing)
-e2e-quick:
-	@echo "Running E2E tests (no build)..."
-	./e2e/run-e2e-tests.sh --no-build
-
-# E2E tests - keep cluster running after tests for debugging
-e2e-debug:
-	@echo "Running E2E tests (keeping cluster running)..."
-	./e2e/run-e2e-tests.sh --keep
