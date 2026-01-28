@@ -321,7 +321,7 @@ teardown() {
     wait_for_execution "$TEST_JOB_NAME" 30
     
     api_post "/v1/jobs/${TEST_JOB_NAME}/run" ""
-    sleep 3
+    wait_for_execution "$TEST_JOB_NAME" 30
     
     # Check executions count
     response=$(api_get "/v1/jobs/${TEST_JOB_NAME}/executions")
