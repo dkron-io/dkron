@@ -16,6 +16,8 @@ jobs:
     name: E2E Tests
     runs-on: ubuntu-latest
     timeout-minutes: 30
+    permissions:
+      contents: read
 
     steps:
       - name: Check out code
