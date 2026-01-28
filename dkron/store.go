@@ -998,4 +998,3 @@ func (s *Store) GetExecutionStats(ctx context.Context, days int) (*ExecutionStat
 
 	return stats, err
 }
-}
