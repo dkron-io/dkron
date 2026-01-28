@@ -144,45 +144,4 @@ const Dashboard = () => {
     );
 };
 
-const Dashboard = () => (
-    <div>
-        <Card>
-            <CardHeader title="Welcome" />
-            <CardContent>
-                <div style={styles.flex}>
-                    <div style={styles.leftCol}>
-                        <div style={styles.flex}>
-                            <Leader value={window.DKRON_LEADER || "devel"} />
-                            <Spacer />
-                            <TotalJobs value={window.DKRON_TOTAL_JOBS || "0"} />
-                            <Spacer />
-                            <SuccessfulJobs value={window.DKRON_SUCCESSFUL_JOBS || "0"} />
-                            <Spacer />
-                            <FailedJobs value={window.DKRON_FAILED_JOBS || "0"} />
-                            <Spacer />
-                            <UntriggeredJobs value={window.DKRON_UNTRIGGERED_JOBS || "0"} />
-                        </div>
-                    </div>
-                </div>
-            </CardContent>
-        </Card>
-        <div style={styles.singleCol}>
-            <ExecutionStatsChart />
-        </div>
-        <Card>
-            <CardHeader title="Nodes" />
-            <CardContent>
-                <List {...fakeProps}>
-                    <Datagrid isRowSelectable={ record => false }>
-                        <TextField source="Name" sortable={false} />
-                        <TextField source="Addr" sortable={false} />
-                        <TextField source="Port" sortable={false} />
-                        <TextField label="Status" source="statusText" sortable={false} />
-                        <TagsField />
-                    </Datagrid>
-                </List>
-            </CardContent>
-        </Card>
-    </div>
-);
 export default Dashboard;
