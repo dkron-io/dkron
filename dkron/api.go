@@ -87,9 +87,39 @@ func (h *HTTPTransport) APIRoutes(r *gin.RouterGroup, middleware ...gin.HandlerF
 	r.GET("/debug/vars", expvar.Handler())
 
 	h.Engine.GET("/health", func(c *gin.Context) {
-		c.JSON(http.StatusOK, gin.H{
+		healthy := true
+		issues := []string{}
+
+		// Check if all plugin processes are running
+		if h.agent.PluginClients != nil {
+			for name, client := range h.agent.PluginClients {
+				if client.Exited() {
+					healthy = false
+					issues = append(issues, fmt.Sprintf("plugin %s has exited", name))
+				}
+			}
+		}
+
+		// Determine status code and response
+		statusCode := http.StatusOK
+		response := gin.H{
 			"status": "healthy",
-		})
+		}
+
+		if !healthy {
+			statusCode = http.StatusServiceUnavailable
+			response = gin.H{
+				"status": "unhealthy",
+				"issues": issues,
+			}
+		}
+
+		// Add cluster information if available
+		if h.agent.config.Server {
+			response["leader"] = h.agent.IsLeader()
+		}
+
+		c.JSON(statusCode, response)
 	})
 
 	if h.agent.config.EnablePrometheus {
@@ -112,6 +142,8 @@ func (h *HTTPTransport) APIRoutes(r *gin.RouterGroup, middleware ...gin.HandlerF
 	v1.GET("/pause", h.pauseStatusHandler)
 	v1.POST("/pause", h.pauseHandler)
 	v1.POST("/unpause", h.unpauseHandler)
+
+	v1.GET("/stats", h.statsHandler)
 
 	v1.POST("/jobs", h.jobCreateOrUpdateHandler)
 	v1.PATCH("/jobs", h.jobCreateOrUpdateHandler)
@@ -546,4 +578,21 @@ func (h *HTTPTransport) unpauseHandler(c *gin.Context) {
 func (h *HTTPTransport) pauseStatusHandler(c *gin.Context) {
 	paused := h.agent.IsNewJobsPaused()
 	renderJSON(c, http.StatusOK, gin.H{"paused": paused})
+}
+
+func (h *HTTPTransport) statsHandler(c *gin.Context) {
+	daysStr := c.DefaultQuery("days", "30")
+	days, err := strconv.Atoi(daysStr)
+	if err != nil {
+		days = 30
+	}
+
+	stats, err := h.agent.Store.GetExecutionStats(c.Request.Context(), days)
+	if err != nil {
+		h.logger.WithError(err).Error("api: Unable to get execution stats")
+		c.AbortWithStatus(http.StatusInternalServerError)
+		return
+	}
+
+	renderJSON(c, http.StatusOK, stats)
 }
