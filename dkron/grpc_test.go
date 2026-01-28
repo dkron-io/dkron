@@ -2,6 +2,7 @@ package dkron
 
 import (
 	"context"
+	"errors"
 	"io/ioutil"
 	"os"
 	"testing"
@@ -12,6 +13,8 @@ import (
 	"github.com/spf13/viper"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 )
 
 func TestGRPCExecutionDone(t *testing.T) {
@@ -181,4 +184,90 @@ func TestGRPCExecutionDone(t *testing.T) {
 		assert.NotNil(t, resp)
 		assert.Equal(t, []byte("retry"), resp.Payload)
 	})
+}
+
+func TestIsRetryableError(t *testing.T) {
+	tests := []struct {
+		name     string
+		err      error
+		expected bool
+	}{
+		{
+			name:     "nil error",
+			err:      nil,
+			expected: false,
+		},
+		{
+			name:     "gRPC Unavailable status code",
+			err:      status.Error(codes.Unavailable, "transport is closing"),
+			expected: true,
+		},
+		{
+			name:     "gRPC DeadlineExceeded status code",
+			err:      status.Error(codes.DeadlineExceeded, "deadline exceeded"),
+			expected: true,
+		},
+		{
+			name:     "gRPC ResourceExhausted status code",
+			err:      status.Error(codes.ResourceExhausted, "quota exceeded"),
+			expected: true,
+		},
+		{
+			name:     "gRPC Aborted status code",
+			err:      status.Error(codes.Aborted, "transaction aborted"),
+			expected: true,
+		},
+		{
+			name:     "gRPC Internal status code",
+			err:      status.Error(codes.Internal, "internal error"),
+			expected: true,
+		},
+		{
+			name:     "gRPC InvalidArgument status code",
+			err:      status.Error(codes.InvalidArgument, "bad request"),
+			expected: false,
+		},
+		{
+			name:     "gRPC NotFound status code",
+			err:      status.Error(codes.NotFound, "not found"),
+			expected: false,
+		},
+		{
+			name:     "transport is closing",
+			err:      errors.New("transport is closing"),
+			expected: true,
+		},
+		{
+			name:     "connection refused",
+			err:      errors.New("connection refused"),
+			expected: true,
+		},
+		{
+			name:     "connection reset",
+			err:      errors.New("connection reset by peer"),
+			expected: true,
+		},
+		{
+			name:     "broken pipe",
+			err:      errors.New("broken pipe"),
+			expected: true,
+		},
+		{
+			name:     "context deadline exceeded",
+			err:      errors.New("context deadline exceeded"),
+			expected: true,
+		},
+		{
+			name:     "non-retryable error",
+			err:      errors.New("some other error"),
+			expected: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := isRetryableError(tt.err)
+			assert.Equal(t, tt.expected, result, "isRetryableError(%v) = %v, want %v", tt.err, result, tt.expected)
+		})
+	}
 }
