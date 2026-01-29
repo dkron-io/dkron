@@ -638,4 +638,3 @@ func TestHealthEndpoint(t *testing.T) {
 		assert.True(t, hasLeader, "health response should include leader field for server nodes")
 	}
 }
-}
