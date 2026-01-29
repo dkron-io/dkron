@@ -170,6 +170,10 @@ teardown() {
     # Should have at least one execution
     count=$(json_array_length "$body")
     [ "$count" -ge 1 ]
+    
+    # Verify the execution has success=false
+    failure_count=$(echo "$body" | jq '[.[] | select(.success == false)] | length' 2>/dev/null)
+    [ "$failure_count" -ge 1 ]
 }
 
 @test "Job execution captures output" {
