@@ -1,4 +1,3 @@
-import * as React from 'react';
 import { FC } from 'react';
 import Icon from '@mui/icons-material/Update';
 
@@ -15,6 +14,7 @@ const TotalJobs: FC<Props> = ({ value }) => {
             icon={Icon}
             title='Total Jobs'
             subtitle={value}
+            color="#3182ce"
         />
     );
 };

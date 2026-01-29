@@ -11,6 +11,7 @@ import authProvider from './authProvider';
 import Dashboard from './dashboard';
 import Settings from './settings/Settings';
 import LoginPage from './LoginPage';
+import { lightTheme } from './theme';
 
 declare global {
     interface Window {
@@ -32,6 +33,7 @@ export const App = () => <Admin
     authProvider={window.DKRON_ACL_ENABLED ? authProvider : undefined}
     dataProvider={dataProvider}
     layout={Layout}
+    theme={lightTheme}
 >
 
     <Resource name="jobs" {...jobs} />
