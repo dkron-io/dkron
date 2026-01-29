@@ -433,10 +433,6 @@ func (grpcc *GRPCClient) AgentRun(addr string, job *typesv1.Job, execution *type
 	defer metrics.MeasureSince([]string{"grpc_client", "agent_run"}, time.Now())
 
 	maxRetries := grpcc.agent.config.AgentRunMaxRetries
-	// Clamp maxRetries to 0 if negative to ensure at least one attempt is made
-	if maxRetries < 0 {
-		maxRetries = 0
-	}
 	initialInterval := grpcc.agent.config.AgentRunRetryInitialInterval
 	maxInterval := grpcc.agent.config.AgentRunRetryMaxInterval
 

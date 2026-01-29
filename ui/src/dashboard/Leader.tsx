@@ -1,4 +1,3 @@
-import * as React from 'react';
 import { FC } from 'react';
 import Icon from '@mui/icons-material/DeviceHub';
 
@@ -15,6 +14,7 @@ const Leader: FC<Props> = ({ value }) => {
             icon={Icon}
             title='Leader'
             subtitle={value}
+            color="#1a365d"
         />
     );
 };

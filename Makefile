@@ -79,12 +79,12 @@ test-email:
 	@echo "Tests complete. View captured emails at http://localhost:8025"
 	@echo "To stop Mailpit, run: docker stop dkron-mailpit"
 
-# E2E tests - run full e2e test suite
+# E2E tests - run full test suite with build
 e2e:
 	@echo "Running E2E tests..."
 	./e2e/run-e2e-tests.sh
 
-# E2E tests - run without rebuild (faster for iterative testing)
+# E2E tests - run without rebuilding
 e2e-quick:
 	@echo "Running E2E tests (no build)..."
 	./e2e/run-e2e-tests.sh --no-build

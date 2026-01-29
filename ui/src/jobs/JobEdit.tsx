@@ -8,19 +8,53 @@ import {
     NumberInput,
     DateTimeInput,
     required,
-    useRecordContext
+    useRecordContext,
+    TopToolbar,
+    ListButton,
+    ShowButton,
 } from 'react-admin';
 import { JsonInput } from "react-admin-json-view";
 
+const JobEditActions = () => (
+    <TopToolbar sx={{ mt: 2, mb: 1 }}>
+        <ListButton />
+        <ShowButton />
+    </TopToolbar>
+);
+
+const JobCreateActions = () => (
+    <TopToolbar sx={{ mt: 2, mb: 1 }}>
+        <ListButton />
+    </TopToolbar>
+);
+
 export const JobEdit = () => {
     const record = useRecordContext();
-    return (<Edit {...record}>
-        <EditForm />
-    </Edit>);
+    return (
+        <Edit 
+            {...record}
+            actions={<JobEditActions />}
+            sx={{
+                '& .RaEdit-main': {
+                    mt: 2,
+                },
+            }}
+        >
+            <EditForm />
+        </Edit>
+    );
 }
 
 export const JobCreate = (props: any) => (
-    <Create {...props}>
+    <Create 
+        {...props}
+        actions={<JobCreateActions />}
+        sx={{
+            '& .RaCreate-main': {
+                mt: 2,
+            },
+        }}
+    >
         <EditForm />
     </Create>
 );

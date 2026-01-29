@@ -614,7 +614,6 @@ func TestHealthEndpoint(t *testing.T) {
 	healthURL := fmt.Sprintf("http://localhost:%s/health", port)
 	dir, a := setupAPITest(t, port)
 	defer os.RemoveAll(dir)
-	defer a.Stop() // nolint: errcheck
 
 	// Test healthy state
 	resp, err := http.Get(healthURL)
