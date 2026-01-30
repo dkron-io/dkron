@@ -11,10 +11,10 @@ provider:    Required. The AI provider to use: "openai", "anthropic", or "local"
 apiKey:      Required for openai/anthropic. API key for the provider
 model:       Optional. Model to use (defaults: gpt-4o-mini for OpenAI, claude-3-haiku-20240307 for Anthropic)
 prompt:      Required. The prompt to send to the AI model
-baseUrl:     Optional. Custom base URL for local/compatible models or custom endpoints
+baseUrl:     Optional for openai/anthropic, required for local. Custom base URL for the API endpoint
 maxTokens:   Optional. Maximum tokens in the response (default: 1000)
 temperature: Optional. Temperature for response randomness, 0.0-2.0 (default: 0.7)
-timeout:     Optional. Request timeout in seconds (default: 120)
+timeout:     Optional. Request timeout in seconds (default: 120, must be positive)
 debug:       Optional. Enable debug logging when set to any non-empty value
 ```
 
@@ -59,7 +59,7 @@ Available Anthropic models include:
 - `claude-3-opus-20240229`
 - `claude-3-sonnet-20240229`
 - `claude-3-haiku-20240307`
-- `claude-3-5-sonnet-20240620`
+- `claude-3-5-sonnet-latest`
 
 ### Local Models
 

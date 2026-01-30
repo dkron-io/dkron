@@ -77,6 +77,36 @@ func TestAIExecute_InvalidTimeout(t *testing.T) {
 	assert.Contains(t, output.Error, "invalid timeout value")
 }
 
+func TestAIExecute_NegativeTimeout(t *testing.T) {
+	pa := &dktypes.ExecuteRequest{
+		JobName: "testJob",
+		Config: map[string]string{
+			"provider": "openai",
+			"apiKey":   "test-key",
+			"prompt":   "Hello",
+			"timeout":  "-5",
+		},
+	}
+	ai := &AI{}
+	output, _ := ai.Execute(pa, nil)
+	assert.Contains(t, output.Error, "timeout must be a positive integer")
+}
+
+func TestAIExecute_ZeroTimeout(t *testing.T) {
+	pa := &dktypes.ExecuteRequest{
+		JobName: "testJob",
+		Config: map[string]string{
+			"provider": "openai",
+			"apiKey":   "test-key",
+			"prompt":   "Hello",
+			"timeout":  "0",
+		},
+	}
+	ai := &AI{}
+	output, _ := ai.Execute(pa, nil)
+	assert.Contains(t, output.Error, "timeout must be a positive integer")
+}
+
 func TestAIExecute_InvalidMaxTokens(t *testing.T) {
 	pa := &dktypes.ExecuteRequest{
 		JobName: "testJob",
@@ -92,6 +122,36 @@ func TestAIExecute_InvalidMaxTokens(t *testing.T) {
 	assert.Contains(t, output.Error, "invalid maxTokens value")
 }
 
+func TestAIExecute_NegativeMaxTokens(t *testing.T) {
+	pa := &dktypes.ExecuteRequest{
+		JobName: "testJob",
+		Config: map[string]string{
+			"provider":  "openai",
+			"apiKey":    "test-key",
+			"prompt":    "Hello",
+			"maxTokens": "-10",
+		},
+	}
+	ai := &AI{}
+	output, _ := ai.Execute(pa, nil)
+	assert.Contains(t, output.Error, "maxTokens must be a positive integer")
+}
+
+func TestAIExecute_ZeroMaxTokens(t *testing.T) {
+	pa := &dktypes.ExecuteRequest{
+		JobName: "testJob",
+		Config: map[string]string{
+			"provider":  "openai",
+			"apiKey":    "test-key",
+			"prompt":    "Hello",
+			"maxTokens": "0",
+		},
+	}
+	ai := &AI{}
+	output, _ := ai.Execute(pa, nil)
+	assert.Contains(t, output.Error, "maxTokens must be a positive integer")
+}
+
 func TestAIExecute_InvalidTemperature(t *testing.T) {
 	pa := &dktypes.ExecuteRequest{
 		JobName: "testJob",
@@ -105,6 +165,50 @@ func TestAIExecute_InvalidTemperature(t *testing.T) {
 	ai := &AI{}
 	output, _ := ai.Execute(pa, nil)
 	assert.Contains(t, output.Error, "invalid temperature value")
+}
+
+func TestAIExecute_NegativeTemperature(t *testing.T) {
+	pa := &dktypes.ExecuteRequest{
+		JobName: "testJob",
+		Config: map[string]string{
+			"provider":    "openai",
+			"apiKey":      "test-key",
+			"prompt":      "Hello",
+			"temperature": "-0.5",
+		},
+	}
+	ai := &AI{}
+	output, _ := ai.Execute(pa, nil)
+	assert.Contains(t, output.Error, "temperature must be between 0.0 and 2.0")
+}
+
+func TestAIExecute_TemperatureTooHigh(t *testing.T) {
+	pa := &dktypes.ExecuteRequest{
+		JobName: "testJob",
+		Config: map[string]string{
+			"provider":    "openai",
+			"apiKey":      "test-key",
+			"prompt":      "Hello",
+			"temperature": "2.5",
+		},
+	}
+	ai := &AI{}
+	output, _ := ai.Execute(pa, nil)
+	assert.Contains(t, output.Error, "temperature must be between 0.0 and 2.0")
+}
+
+func TestAIExecute_LocalProviderMissingBaseUrl(t *testing.T) {
+	pa := &dktypes.ExecuteRequest{
+		JobName: "testJob",
+		Config: map[string]string{
+			"provider": "local",
+			"prompt":   "Hello",
+			"model":    "llama2",
+		},
+	}
+	ai := &AI{}
+	output, _ := ai.Execute(pa, nil)
+	assert.Contains(t, output.Error, "baseUrl is required for local provider")
 }
 
 func TestAIExecute_OpenAISuccess(t *testing.T) {

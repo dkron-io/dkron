@@ -67,7 +67,16 @@ func (a *AI) ExecuteImpl(args *dktypes.ExecuteRequest) ([]byte, error) {
 	var debug bool
 	if args.Config["debug"] != "" {
 		debug = true
-		log.Printf("AI executor config: %#v\n", args.Config)
+		// Log config without sensitive API key
+		safeConfig := make(map[string]string)
+		for k, v := range args.Config {
+			if k == "apiKey" {
+				safeConfig[k] = "[REDACTED]"
+			} else {
+				safeConfig[k] = v
+			}
+		}
+		log.Printf("AI executor config: %#v\n", safeConfig)
 	}
 
 	// Validate required parameters
@@ -94,6 +103,9 @@ func (a *AI) ExecuteImpl(args *dktypes.ExecuteRequest) ([]byte, error) {
 		if err != nil {
 			return output.Bytes(), fmt.Errorf("invalid timeout value: %s", args.Config["timeout"])
 		}
+		if t <= 0 {
+			return output.Bytes(), fmt.Errorf("timeout must be a positive integer, got: %d", t)
+		}
 		timeout = t
 	}
 
@@ -102,6 +114,9 @@ func (a *AI) ExecuteImpl(args *dktypes.ExecuteRequest) ([]byte, error) {
 		mt, err := strconv.Atoi(args.Config["maxTokens"])
 		if err != nil {
 			return output.Bytes(), fmt.Errorf("invalid maxTokens value: %s", args.Config["maxTokens"])
+		}
+		if mt <= 0 {
+			return output.Bytes(), fmt.Errorf("maxTokens must be a positive integer, got: %d", mt)
 		}
 		maxTokens = mt
 	}
@@ -112,6 +127,9 @@ func (a *AI) ExecuteImpl(args *dktypes.ExecuteRequest) ([]byte, error) {
 		if err != nil {
 			return output.Bytes(), fmt.Errorf("invalid temperature value: %s", args.Config["temperature"])
 		}
+		if t < 0.0 || t > 2.0 {
+			return output.Bytes(), fmt.Errorf("temperature must be between 0.0 and 2.0, got: %f", t)
+		}
 		temperature = t
 	}
 
@@ -119,7 +137,13 @@ func (a *AI) ExecuteImpl(args *dktypes.ExecuteRequest) ([]byte, error) {
 	var err error
 
 	switch provider {
-	case "openai", "local":
+	case "openai":
+		result, err = a.executeOpenAI(args.Config, prompt, apiKey, maxTokens, temperature, timeout, debug)
+	case "local":
+		// For local provider, baseUrl is required to avoid accidentally sending data to OpenAI
+		if args.Config["baseUrl"] == "" {
+			return output.Bytes(), errors.New("baseUrl is required for local provider")
+		}
 		result, err = a.executeOpenAI(args.Config, prompt, apiKey, maxTokens, temperature, timeout, debug)
 	case "anthropic":
 		result, err = a.executeAnthropic(args.Config, prompt, apiKey, maxTokens, temperature, timeout, debug)
@@ -221,11 +245,20 @@ func (a *AI) executeOpenAI(config map[string]string, prompt, apiKey string, maxT
 
 	var openAIResp openAIResponse
 	if err := json.Unmarshal(body, &openAIResp); err != nil {
+		// If JSON parsing fails and we have a non-2xx status, report the status
+		if resp.StatusCode < 200 || resp.StatusCode >= 300 {
+			return "", fmt.Errorf("API request failed with status %d: %s", resp.StatusCode, string(body))
+		}
 		return "", fmt.Errorf("failed to parse response: %w", err)
 	}
 
 	if openAIResp.Error != nil {
 		return "", fmt.Errorf("API error: %s", openAIResp.Error.Message)
+	}
+
+	// Check for non-2xx status codes that didn't include an error object
+	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
+		return "", fmt.Errorf("API request failed with status %d", resp.StatusCode)
 	}
 
 	if len(openAIResp.Choices) == 0 {
@@ -319,11 +352,20 @@ func (a *AI) executeAnthropic(config map[string]string, prompt, apiKey string, m
 
 	var anthropicResp anthropicResponse
 	if err := json.Unmarshal(body, &anthropicResp); err != nil {
+		// If JSON parsing fails and we have a non-2xx status, report the status
+		if resp.StatusCode < 200 || resp.StatusCode >= 300 {
+			return "", fmt.Errorf("API request failed with status %d: %s", resp.StatusCode, string(body))
+		}
 		return "", fmt.Errorf("failed to parse response: %w", err)
 	}
 
 	if anthropicResp.Error != nil {
 		return "", fmt.Errorf("API error: %s", anthropicResp.Error.Message)
+	}
+
+	// Check for non-2xx status codes that didn't include an error object
+	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
+		return "", fmt.Errorf("API request failed with status %d", resp.StatusCode)
 	}
 
 	if len(anthropicResp.Content) == 0 {
