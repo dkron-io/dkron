@@ -27,9 +27,11 @@ import PlaylistPlayIcon from "@mui/icons-material/PlaylistPlay";
 import CheckCircleIcon from "@mui/icons-material/CheckCircle";
 import ErrorIcon from "@mui/icons-material/Error";
 import HourglassEmptyIcon from "@mui/icons-material/HourglassEmpty";
+import AccountTreeIcon from "@mui/icons-material/AccountTree";
 import { Box, Card, CardContent, Typography, Chip, Tooltip } from "@mui/material";
 import { useState } from "react";
 import { apiUrl, httpClient } from "../dataProvider";
+import JobDependencyDiagram from "./JobDependencyDiagram";
 
 const JobShowActions = ({ data }: any) => (
   <TopToolbar sx={{ gap: 1, mt: 2, mb: 1 }}>
@@ -404,6 +406,10 @@ const JobShow = (props: any) => (
             </ReferenceManyField>
           </CardContent>
         </Card>
+      </Tab>
+
+      <Tab label="Dependencies" path="dependencies" icon={<AccountTreeIcon />}>
+        <JobDependencyDiagram />
       </Tab>
     </TabbedShowLayout>
   </Show>
