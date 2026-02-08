@@ -146,7 +146,7 @@ Made with [contrib.rocks](https://contrib.rocks).
 
 ## Get in touch
 
-- Twitter: [@distribworks](https://twitter.com/distribworks)
+- Twitter: [@dkronio](https://twitter.com/dkronio)
 - Chat: https://gitter.im/distribworks/dkron
-- Email: victor at distrib.works
+- Email: support at dkron.io
 
