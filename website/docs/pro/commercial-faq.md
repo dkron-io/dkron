@@ -67,6 +67,6 @@ Dkron Pro is credit card only, no exceptions.
 
 Distributed Works
 
-All billing/support inquiries: support@distrib.works
+All billing/support inquiries: support@dkron.io
 
 Phone: not available
