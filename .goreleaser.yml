@@ -11,8 +11,6 @@ builds:
       main: .
       id: dkron
       binary: dkron
-      flags:
-          - -tags=hashicorpmetrics
       env:
           - CGO_ENABLED=0
       goos:

@@ -22,7 +22,7 @@ The system is inspired by Google's "Reliable Cron across the Planet" whitepaper 
 make main
 
 # Build main binary manually
-go build -tags=hashicorpmetrics main.go
+go build main.go
 
 # Install built-in plugins (executors and processors)
 GOBIN=`pwd` go install ./builtin/...

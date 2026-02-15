@@ -134,4 +134,4 @@ ui: dkron/ui-dist
 main: dkron/ui-dist types/dkron.pb.go types/executor.pb.go *.go */*.go */*/*.go */*/*/*.go
 	GOBIN=`pwd` go install ./builtin/...
 	go mod tidy
-	go build -tags=hashicorpmetrics main.go
+	go build main.go
