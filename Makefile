@@ -79,6 +79,21 @@ test-email:
 	@echo "Tests complete. View captured emails at http://localhost:8025"
 	@echo "To stop Mailpit, run: docker stop dkron-mailpit"
 
+# E2E tests - run full test suite with build
+e2e:
+	@echo "Running E2E tests..."
+	./e2e/run-e2e-tests.sh
+
+# E2E tests - run without rebuilding
+e2e-quick:
+	@echo "Running E2E tests (no build)..."
+	./e2e/run-e2e-tests.sh --no-build
+
+# E2E tests - keep cluster running after tests for debugging
+e2e-debug:
+	@echo "Running E2E tests (keeping cluster running)..."
+	./e2e/run-e2e-tests.sh --keep
+
 updatetestcert:
 	wget https://badssl.com/certs/badssl.com-client.p12 -q -O badssl.com-client.p12
 	openssl pkcs12 -in badssl.com-client.p12 -nocerts -nodes -passin pass:badssl.com -legacy -out plugin/http/testdata/badssl.com-client-key-decrypted.pem

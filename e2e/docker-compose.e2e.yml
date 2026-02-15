@@ -1,0 +1,28 @@
+# Docker Compose file for E2E testing
+# This creates a minimal Dkron cluster for testing
+
+services:
+  # Primary leader node
+  dkron-leader:
+    build:
+      context: ..
+      dockerfile: Dockerfile
+    command: dkron agent --server --log-level=debug --bootstrap-expect=1 --node-name=dkron-leader
+    ports:
+      - "8080:8080"
+      - "8946:8946"
+      - "6868:6868"
+    environment:
+      - GODEBUG=netdns=go
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:8080/health || exit 1"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+      start_period: 10s
+    networks:
+      - dkron-e2e
+
+networks:
+  dkron-e2e:
+    driver: bridge
