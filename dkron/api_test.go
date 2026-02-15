@@ -637,3 +637,51 @@ func TestHealthEndpoint(t *testing.T) {
 		assert.True(t, hasLeader, "health response should include leader field for server nodes")
 	}
 }
+
+func TestPrometheusMetricsEndpoint(t *testing.T) {
+	port := "8103"
+	metricsURL := fmt.Sprintf("http://localhost:%s/metrics", port)
+
+	dir, err := ioutil.TempDir("", "dkron-test")
+	require.NoError(t, err)
+	defer os.RemoveAll(dir)
+
+	ip1, returnFn1 := testutil.TakeIP()
+	defer returnFn1()
+
+	c := DefaultConfig()
+	c.BindAddr = ip1.String()
+	c.HTTPAddr = fmt.Sprintf("127.0.0.1:%s", port)
+	c.NodeName = "test"
+	c.Server = true
+	c.LogLevel = logLevel
+	c.BootstrapExpect = 1
+	c.DevMode = true
+	c.DataDir = dir
+	c.EnablePrometheus = true
+
+	a := NewAgent(c)
+	_ = a.Start()
+	defer a.Stop() // nolint: errcheck
+
+	for !a.IsLeader() {
+		time.Sleep(10 * time.Millisecond)
+	}
+	time.Sleep(1 * time.Second)
+
+	req, err := http.NewRequest(http.MethodGet, metricsURL, nil)
+	require.NoError(t, err)
+	req.Header.Set("Accept-Encoding", "gzip")
+
+	resp, err := http.DefaultClient.Do(req)
+	require.NoError(t, err)
+	defer resp.Body.Close()
+
+	body, err := io.ReadAll(resp.Body)
+	require.NoError(t, err)
+
+	assert.Equal(t, http.StatusOK, resp.StatusCode)
+	assert.Contains(t, resp.Header.Get("Content-Type"), "text/plain")
+	assert.Empty(t, resp.Header.Get("Content-Encoding"))
+	assert.Contains(t, string(body), "dkron_")
+}
