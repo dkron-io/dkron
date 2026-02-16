@@ -19,6 +19,7 @@ The shell executor runs commands on the target node's operating system. It can:
 | `command` | Yes | The command or script to execute |
 | `env` | No | Environment variables in the format "KEY1=value1,KEY2=value2" |
 | `cwd` | No | The working directory to run the command from |
+| `su` | No | Unix only. Run the command as a different user or `user:group` |
 | `timeout` | No | Maximum execution time after which the job is forcefully terminated |
 | `mem_limit` | No | Maximum memory usage after which the job is forcefully terminated. Supports units: B, KB, MB, GB, TB |
 
