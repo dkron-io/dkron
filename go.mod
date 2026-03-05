@@ -9,7 +9,7 @@ require (
 	github.com/fullstorydev/grpcurl v1.9.3
 	github.com/gin-contrib/cors v1.7.6
 	github.com/gin-contrib/expvar v1.0.3
-	github.com/gin-gonic/gin v1.11.0
+	github.com/gin-gonic/gin v1.12.0
 	github.com/hashicorp/go-discover v1.1.0
 	github.com/hashicorp/go-hclog v1.6.3
 	github.com/hashicorp/go-metrics v0.5.4
@@ -49,7 +49,7 @@ require (
 	go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc v1.40.0
 	go.opentelemetry.io/otel/sdk v1.41.0
 	go.opentelemetry.io/otel/trace v1.41.0
-	golang.org/x/net v0.50.0
+	golang.org/x/net v0.51.0
 	google.golang.org/grpc v1.79.1
 	google.golang.org/protobuf v1.36.11
 )
@@ -217,6 +217,7 @@ require (
 	github.com/xdg-go/pbkdf2 v1.0.0 // indirect
 	github.com/xdg-go/stringprep v1.0.4 // indirect
 	github.com/yusufpapurcu/wmi v1.2.4 // indirect
+	go.mongodb.org/mongo-driver/v2 v2.5.0 // indirect
 	go.opencensus.io v0.24.0 // indirect
 	go.opentelemetry.io/auto/sdk v1.2.1 // indirect
 	go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp v0.61.0 // indirect
@@ -252,4 +253,4 @@ require (
 	sigs.k8s.io/yaml v1.2.0 // indirect
 )
 
-go 1.24.0
+go 1.25.0
