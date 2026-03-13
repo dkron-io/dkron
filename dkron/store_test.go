@@ -2,9 +2,11 @@ package dkron
 
 import (
 	"context"
+	"fmt"
 	"testing"
 	"time"
 
+	"github.com/prometheus/client_golang/prometheus"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/tidwall/buntdb"
@@ -391,6 +393,81 @@ func TestStore_GetRunningExecutions(t *testing.T) {
 	runningExecs, err = s.GetRunningExecutions(ctx, "nonexistent")
 	assert.NoError(t, err)
 	assert.Empty(t, runningExecs)
+}
+
+func TestSetExecutionDonePrometheusMetrics(t *testing.T) {
+	s := setupStore(t)
+	defer s.Shutdown() // nolint: errcheck
+	ctx := context.Background()
+
+	successJobName := fmt.Sprintf("success-%d", time.Now().UnixNano())
+	failedJobName := fmt.Sprintf("failed-%d", time.Now().UnixNano())
+
+	require.NoError(t, s.SetJob(ctx, &Job{
+		Name:           successJobName,
+		Schedule:       "@every 2s",
+		Executor:       "shell",
+		ExecutorConfig: map[string]string{"command": "/bin/true"},
+		Disabled:       true,
+	}, true))
+
+	require.NoError(t, s.SetJob(ctx, &Job{
+		Name:           failedJobName,
+		Schedule:       "@every 2s",
+		Executor:       "shell",
+		ExecutorConfig: map[string]string{"command": "/bin/false"},
+		Disabled:       true,
+	}, true))
+
+	successBefore := getPrometheusCounterValue(t, "dkron_job_executions_succeeded_total", "job_name", successJobName)
+	failedBefore := getPrometheusCounterValue(t, "dkron_job_executions_failed_total", "job_name", failedJobName)
+
+	_, err := s.SetExecutionDone(ctx, &Execution{
+		JobName:    successJobName,
+		StartedAt:  time.Now().UTC(),
+		FinishedAt: time.Now().UTC(),
+		Success:    true,
+		NodeName:   "testNode",
+		Group:      time.Now().UnixNano(),
+		Attempt:    1,
+	})
+	require.NoError(t, err)
+
+	_, err = s.SetExecutionDone(ctx, &Execution{
+		JobName:    failedJobName,
+		StartedAt:  time.Now().UTC(),
+		FinishedAt: time.Now().UTC(),
+		Success:    false,
+		NodeName:   "testNode",
+		Group:      time.Now().UnixNano(),
+		Attempt:    1,
+	})
+	require.NoError(t, err)
+
+	assert.Equal(t, successBefore+1, getPrometheusCounterValue(t, "dkron_job_executions_succeeded_total", "job_name", successJobName))
+	assert.Equal(t, failedBefore+1, getPrometheusCounterValue(t, "dkron_job_executions_failed_total", "job_name", failedJobName))
+}
+
+func getPrometheusCounterValue(t *testing.T, metricName, labelName, labelValue string) float64 {
+	t.Helper()
+
+	mfs, err := prometheus.DefaultGatherer.Gather()
+	require.NoError(t, err)
+
+	for _, mf := range mfs {
+		if mf.GetName() != metricName {
+			continue
+		}
+		for _, metric := range mf.GetMetric() {
+			for _, label := range metric.GetLabel() {
+				if label.GetName() == labelName && label.GetValue() == labelValue {
+					return metric.GetCounter().GetValue()
+				}
+			}
+		}
+	}
+
+	return 0
 }
 
 // Following are supporting functions for the tests
