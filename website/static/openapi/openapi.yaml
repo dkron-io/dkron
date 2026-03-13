@@ -657,10 +657,18 @@ components:
           readOnly: false
         schedule:
           type: string
-          description: Cron expression for the job.
+          description: |
+            Cron expression or special schedule descriptor for the job.
+            Supports standard cron expressions, predefined schedules (@hourly, @daily, etc.),
+            fixed intervals (@every 10s), one-time execution (@at 2024-01-01T00:00:00Z),
+            and one-time execution with grace period (@after 2024-01-01T00:00:00Z <PT2H).
           readOnly: false
           examples:
             - '@every 10s'
+            - '@daily'
+            - '0 0 9 * * 1-5'
+            - '@at 2024-12-31T23:59:00Z'
+            - '@after 2024-01-01T09:00:00Z <PT30M'
         timezone:
           type: string
           description: Timezone where the job will be executed. By default and when field is set to empty string, the job will run in local time.
