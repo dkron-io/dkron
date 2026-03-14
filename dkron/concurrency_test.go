@@ -197,7 +197,7 @@ func TestConcurrencyForbid_StaleExecutionCleanup(t *testing.T) {
 		Success:    false,
 		Output:     "running",
 		NodeName:   "crashed-node",
-		Group:      time.Now().Add(-5 * time.Hour).UnixNano(),
+		Group:      time.Now().UTC().Add(-5 * time.Hour).UnixNano(),
 		Attempt:    1,
 	}
 
@@ -258,7 +258,7 @@ func TestConcurrencyForbid_RecentExecutionNotCleaned(t *testing.T) {
 		Success:    false,
 		Output:     "running",
 		NodeName:   "active-node",
-		Group:      time.Now().Add(-10 * time.Minute).UnixNano(),
+		Group:      time.Now().UTC().Add(-10 * time.Minute).UnixNano(),
 		Attempt:    1,
 	}
 

@@ -455,33 +455,19 @@ func (j *Job) isRunnable(logger *logrus.Entry) bool {
 		}
 
 		for _, exec := range runningExecs {
-			// Cross-reference with active in-memory executions
-			isActive := false
-			for _, e := range exs {
-				if e.JobName == exec.JobName && e.NodeName == exec.NodeName &&
-					e.StartedAt.AsTime().Equal(exec.StartedAt) {
-					isActive = true
-					break
-				}
-			}
-
-			if isActive {
-				// Already blocked above, but just in case
-				return false
-			}
-
 			// Execution is in storage but not in active memory.
 			// If it has been running longer than the stale threshold, clean it up.
-			if time.Since(exec.StartedAt) > DefaultStaleExecutionThreshold {
+			runningFor := time.Now().UTC().Sub(exec.StartedAt)
+			if runningFor > DefaultStaleExecutionThreshold {
 				logger.WithFields(logrus.Fields{
 					"job":         j.Name,
 					"execution":   exec.Key(),
 					"node":        exec.NodeName,
 					"started_at":  exec.StartedAt,
-					"running_for": time.Since(exec.StartedAt).String(),
+					"running_for": runningFor.String(),
 				}).Warn("job: Cleaning up stale execution from storage")
 
-				exec.FinishedAt = time.Now()
+				exec.FinishedAt = time.Now().UTC()
 				exec.Success = false
 				exec.Output += "\nExecution marked as failed: detected as stale (not active on any node)"
 
@@ -490,13 +476,19 @@ func (j *Job) isRunnable(logger *logrus.Entry) bool {
 				}
 				cmd, err := Encode(ExecutionDoneType, execDoneReq)
 				if err != nil {
-					logger.WithError(err).Error("job: Error encoding stale execution cleanup")
+					logger.WithError(err).WithFields(logrus.Fields{
+						"execution": exec.Key(),
+						"node":      exec.NodeName,
+					}).Error("job: Error encoding stale execution cleanup")
 					continue
 				}
 				af := j.Agent.RaftApply(cmd)
 				if af != nil {
 					if err := af.Error(); err != nil {
-						logger.WithError(err).Error("job: Error applying stale execution cleanup")
+						logger.WithError(err).WithFields(logrus.Fields{
+							"execution": exec.Key(),
+							"node":      exec.NodeName,
+						}).Error("job: Error applying stale execution cleanup")
 					}
 				}
 				continue
@@ -512,7 +504,7 @@ func (j *Job) isRunnable(logger *logrus.Entry) bool {
 				"execution":     exec.Key(),
 				"node":          exec.NodeName,
 				"started_at":    exec.StartedAt,
-				"running_for":   time.Since(exec.StartedAt).String(),
+				"running_for":   runningFor.String(),
 			}).Info("job: Skipping concurrent execution (found running execution in storage)")
 			return false
 		}
