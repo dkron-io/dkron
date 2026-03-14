@@ -36,6 +36,7 @@ func TestGRPCExecutionDone(t *testing.T) {
 	c.BootstrapExpect = 1
 	c.DevMode = true
 	c.DataDir = dir
+	c.HTTPAddr = "127.0.0.1:0"
 
 	a := NewAgent(c)
 	_ = a.Start()

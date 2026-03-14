@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"log"
+	"net"
 	"os"
 	"sort"
 	"testing"
@@ -14,6 +15,16 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
+
+// getFreePort asks the OS for a free port and returns it as a string.
+func getFreePort(t *testing.T) string {
+	t.Helper()
+	l, err := net.Listen("tcp", "127.0.0.1:0")
+	require.NoError(t, err)
+	port := l.Addr().(*net.TCPAddr).Port
+	l.Close()
+	return fmt.Sprintf("%d", port)
+}
 
 var (
 	logLevel = "info"
@@ -45,6 +56,7 @@ func TestAgentCommand_runForElection(t *testing.T) {
 	c.BootstrapExpect = 3
 	c.DevMode = true
 	c.DataDir = dir
+	c.HTTPAddr = "127.0.0.1:0"
 
 	a1 := NewAgent(c)
 	err = a1.Start()
@@ -72,6 +84,7 @@ func TestAgentCommand_runForElection(t *testing.T) {
 	c.BootstrapExpect = 3
 	c.DevMode = true
 	c.DataDir = dir
+	c.HTTPAddr = "127.0.0.1:0"
 
 	a2 := NewAgent(c)
 	err = a2.Start()
@@ -91,6 +104,7 @@ func TestAgentCommand_runForElection(t *testing.T) {
 	c.BootstrapExpect = 3
 	c.DevMode = true
 	c.DataDir = dir
+	c.HTTPAddr = "127.0.0.1:0"
 
 	a3 := NewAgent(c)
 	err = a3.Start()
@@ -141,6 +155,7 @@ func Test_getTargetNodes(t *testing.T) {
 	}
 	c.DevMode = true
 	c.DataDir = dir
+	c.HTTPAddr = "127.0.0.1:0"
 
 	a1 := NewAgent(c)
 	_ = a1.Start()
@@ -163,6 +178,7 @@ func Test_getTargetNodes(t *testing.T) {
 	}
 	c.DevMode = true
 	c.DataDir = dir
+	c.HTTPAddr = "127.0.0.1:0"
 
 	a2 := NewAgent(c)
 	_ = a2.Start()
@@ -187,6 +203,7 @@ func Test_getTargetNodes(t *testing.T) {
 	}
 	c.DevMode = true
 	c.DataDir = dir
+	c.HTTPAddr = "127.0.0.1:0"
 
 	a3 := NewAgent(c)
 	_ = a3.Start()
@@ -341,6 +358,7 @@ func TestEncrypt(t *testing.T) {
 	c.LogLevel = logLevel
 	c.DevMode = true
 	c.DataDir = dir
+	c.HTTPAddr = "127.0.0.1:0"
 
 	a := NewAgent(c)
 	_ = a.Start()
@@ -369,6 +387,7 @@ func Test_advertiseRPCAddr(t *testing.T) {
 	c.LogLevel = logLevel
 	c.DevMode = true
 	c.DataDir = dir
+	c.HTTPAddr = "127.0.0.1:0"
 
 	a := NewAgent(c)
 	_ = a.Start()
@@ -401,6 +420,7 @@ func Test_bindRPCAddr(t *testing.T) {
 	c.DevMode = true
 	c.DataDir = dir
 	c.AdvertiseAddr = c.BindAddr
+	c.HTTPAddr = "127.0.0.1:0"
 
 	a := NewAgent(c)
 	err = a.Start()
@@ -431,6 +451,7 @@ func TestAgentConfig(t *testing.T) {
 	c.LogLevel = logLevel
 	c.DataDir = dir
 	c.DevMode = true
+	c.HTTPAddr = "127.0.0.1:0"
 
 	a := NewAgent(c)
 	_ = a.Start()
@@ -651,16 +672,15 @@ func TestAgent_RaftNotInitializedNoPanic(t *testing.T) {
 	c.DataDir = dir
 
 	a := NewAgent(c)
-	
+
 	// Call methods that access a.raft before Start() is called
 	// These should not panic
 	assert.False(t, a.IsLeader(), "IsLeader should return false when raft is not initialized")
-	
+
 	leader := a.Leader()
 	assert.Equal(t, "", string(leader), "Leader should return empty string when raft is not initialized")
-	
+
 	member, err := a.leaderMember()
 	assert.Nil(t, member, "leaderMember should return nil when raft is not initialized")
 	assert.Equal(t, ErrLeaderNotFound, err, "leaderMember should return ErrLeaderNotFound when raft is not initialized")
 }
-

@@ -51,7 +51,7 @@ func setupAPITest(t *testing.T, port string) (dir string, a *Agent) {
 }
 
 func TestAPIJobCreateUpdate(t *testing.T) {
-	port := "8091"
+	port := getFreePort(t)
 	baseURL := fmt.Sprintf("http://localhost:%s/v1", port)
 	dir, _ := setupAPITest(t, port)
 	defer os.RemoveAll(dir)
@@ -103,7 +103,7 @@ func TestAPIJobCreateUpdate(t *testing.T) {
 }
 
 func TestAPIJobCreateUpdateParentJob_SameParent(t *testing.T) {
-	resp := postJob(t, "8092", []byte(`{
+	resp := postJob(t, getFreePort(t), []byte(`{
 		"name": "test_job",
 		"schedule": "@every 1m",
 		"command": "date",
@@ -121,7 +121,7 @@ func TestAPIJobCreateUpdateParentJob_SameParent(t *testing.T) {
 }
 
 func TestAPIJobCreateUpdateParentJob_NoParent(t *testing.T) {
-	resp := postJob(t, "8093", []byte(`{
+	resp := postJob(t, getFreePort(t), []byte(`{
 		"name": "test_job",
 		"schedule": "@every 1m",
 		"command": "date",
@@ -140,7 +140,7 @@ func TestAPIJobCreateUpdateParentJob_NoParent(t *testing.T) {
 }
 
 func TestAPIJobCreateUpdateParentJob_KeepDependents(t *testing.T) {
-	port := "8111"
+	port := getFreePort(t)
 	baseURL := fmt.Sprintf("http://localhost:%s/v1", port)
 	dir, a := setupAPITest(t, port)
 	defer os.RemoveAll(dir)
@@ -197,7 +197,7 @@ func TestAPIJobCreateUpdateParentJob_KeepDependents(t *testing.T) {
 }
 
 func TestAPIJobCreateUpdateValidationBadName(t *testing.T) {
-	resp := postJob(t, "8094", []byte(`{
+	resp := postJob(t, getFreePort(t), []byte(`{
 		"name": "BAD JOB NAME!",
 		"schedule": "@every 1m",
 		"executor": "shell",
@@ -209,7 +209,7 @@ func TestAPIJobCreateUpdateValidationBadName(t *testing.T) {
 }
 
 func TestAPIJobCreateUpdateValidationValidName(t *testing.T) {
-	resp := postJob(t, "8095", []byte(`{
+	resp := postJob(t, getFreePort(t), []byte(`{
 		"name": "abcdefghijklmnopqrstuvwxyz0123456789-_ßñëäïüøüáéíóýćàèìòùâêîôûæšłç",
 		"schedule": "@every 1m",
 		"executor": "shell",
@@ -221,7 +221,7 @@ func TestAPIJobCreateUpdateValidationValidName(t *testing.T) {
 }
 
 func TestAPIJobCreateUpdateValidationEmptyName(t *testing.T) {
-	port := "8101"
+	port := getFreePort(t)
 	baseURL := fmt.Sprintf("http://localhost:%s/v1", port)
 	dir, a := setupAPITest(t, port)
 	defer os.RemoveAll(dir)
@@ -254,7 +254,7 @@ func TestAPIJobCreateUpdateValidationEmptyName(t *testing.T) {
 }
 
 func TestAPIJobCreateUpdateValidationBadSchedule(t *testing.T) {
-	resp := postJob(t, "8097", []byte(`{
+	resp := postJob(t, getFreePort(t), []byte(`{
 		"name": "testjob",
 		"schedule": "@at badtime",
 		"executor": "shell",
@@ -266,7 +266,7 @@ func TestAPIJobCreateUpdateValidationBadSchedule(t *testing.T) {
 }
 
 func TestAPIJobCreateUpdateValidationBadConcurrency(t *testing.T) {
-	resp := postJob(t, "8098", []byte(`{
+	resp := postJob(t, getFreePort(t), []byte(`{
 		"name": "testjob",
 		"schedule": "@every 1m",
 		"executor": "shell",
@@ -279,7 +279,7 @@ func TestAPIJobCreateUpdateValidationBadConcurrency(t *testing.T) {
 }
 
 func TestAPIJobCreateUpdateValidationBadTimezone(t *testing.T) {
-	resp := postJob(t, "8099", []byte(`{
+	resp := postJob(t, getFreePort(t), []byte(`{
 		"name": "testjob",
 		"schedule": "@every 1m",
 		"executor": "shell",
@@ -292,7 +292,7 @@ func TestAPIJobCreateUpdateValidationBadTimezone(t *testing.T) {
 }
 
 func TestAPIJobCreateUpdateValidationBadShellExecutorTimeout(t *testing.T) {
-	resp := postJob(t, "8099", []byte(`{
+	resp := postJob(t, getFreePort(t), []byte(`{
 		"name": "testjob",
 		"schedule": "@every 1m",
 		"executor": "shell",
@@ -304,7 +304,7 @@ func TestAPIJobCreateUpdateValidationBadShellExecutorTimeout(t *testing.T) {
 }
 
 func TestAPIGetNonExistentJobReturnsNotFound(t *testing.T) {
-	port := "8096"
+	port := getFreePort(t)
 	baseURL := fmt.Sprintf("http://localhost:%s/v1", port)
 	dir, a := setupAPITest(t, port)
 	defer os.RemoveAll(dir)
@@ -316,7 +316,7 @@ func TestAPIGetNonExistentJobReturnsNotFound(t *testing.T) {
 }
 
 func TestAPIJobCreateUpdateJobWithInvalidParentIsNotCreated(t *testing.T) {
-	port := "8100"
+	port := getFreePort(t)
 	baseURL := fmt.Sprintf("http://localhost:%s/v1", port)
 	dir, a := setupAPITest(t, port)
 	defer os.RemoveAll(dir)
@@ -346,7 +346,7 @@ func TestAPIJobCreateUpdateJobWithInvalidParentIsNotCreated(t *testing.T) {
 }
 
 func TestAPIJobRestore(t *testing.T) {
-	port := "8109"
+	port := getFreePort(t)
 	baseURL := fmt.Sprintf("http://localhost:%s/v1/restore", port)
 	dir, a := setupAPITest(t, port)
 	defer os.RemoveAll(dir)
@@ -383,7 +383,7 @@ func TestAPIJobRestore(t *testing.T) {
 }
 
 func TestAPIJobOutputTruncate(t *testing.T) {
-	port := "8190"
+	port := getFreePort(t)
 	baseURL := fmt.Sprintf("http://localhost:%s/v1", port)
 	dir, a := setupAPITest(t, port)
 	defer os.RemoveAll(dir)
@@ -493,7 +493,7 @@ func postJob(t *testing.T, port string, jsonStr []byte) *http.Response {
 // TestAPILeaderEndpointsNoRaftNoPanic tests that leader-related endpoints
 // don't panic when accessed before Raft is fully initialized (issue #1702)
 func TestAPILeaderEndpointsNoRaftNoPanic(t *testing.T) {
-	port := "8095"
+	port := getFreePort(t)
 	baseURL := fmt.Sprintf("http://localhost:%s/v1", port)
 
 	dir, err := ioutil.TempDir("", "dkron-test")
@@ -542,7 +542,7 @@ func TestAPILeaderEndpointsNoRaftNoPanic(t *testing.T) {
 }
 
 func TestAPIPauseUnpause(t *testing.T) {
-	port := "8102"
+	port := getFreePort(t)
 	baseURL := fmt.Sprintf("http://localhost:%s/v1", port)
 	dir, a := setupAPITest(t, port)
 	defer os.RemoveAll(dir)
@@ -610,7 +610,7 @@ func TestAPIPauseUnpause(t *testing.T) {
 }
 
 func TestHealthEndpoint(t *testing.T) {
-	port := "8099"
+	port := getFreePort(t)
 	healthURL := fmt.Sprintf("http://localhost:%s/health", port)
 	dir, a := setupAPITest(t, port)
 	defer os.RemoveAll(dir)
@@ -639,7 +639,7 @@ func TestHealthEndpoint(t *testing.T) {
 }
 
 func TestPrometheusMetricsEndpoint(t *testing.T) {
-	port := "8103"
+	port := getFreePort(t)
 	metricsURL := fmt.Sprintf("http://localhost:%s/metrics", port)
 
 	dir, err := ioutil.TempDir("", "dkron-test")
