@@ -5,7 +5,12 @@ sidebar_position: 1
 
 ## Dkron - Distributed, fault tolerant job scheduling system
 
-Welcome to the Dkron documentation! This is the reference guide on how to use Dkron. If you want a getting started guide refer to the [getting started guide](/docs/basics/getting-started).
+Welcome to the Dkron documentation! To make it easier to find the right kind of information, the docs follow the Diátaxis approach:
+
+- **Tutorials** for learning by doing: [Getting started](/docs/basics/getting-started)
+- **How-to guides** for solving specific tasks: [Usage guides](/docs/usage/chaining)
+- **Reference** for commands and exact behavior: [CLI reference](/docs/cli/dkron)
+- **Explanation** for understanding concepts and design: [Architecture](/docs/architecture), [Concepts](/docs/usage/concepts), [FAQ](/docs/faq)
 
 ## What is Dkron
 
