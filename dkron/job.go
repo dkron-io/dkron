@@ -37,6 +37,12 @@ const (
 
 	// HashSymbol is the "magic" character used in scheduled to be replaced with a value based on job name
 	HashSymbol = "~"
+
+	// DefaultStaleExecutionThreshold is the duration after which a "running" execution
+	// in storage that is not found in active in-memory executions is considered stale.
+	// Stale executions are automatically cleaned up to prevent permanently blocking
+	// jobs with concurrency=forbid.
+	DefaultStaleExecutionThreshold = 4 * time.Hour
 )
 
 var (
@@ -421,27 +427,7 @@ func (j *Job) isRunnable(logger *logrus.Entry) bool {
 	}
 
 	if j.Concurrency == ConcurrencyForbid {
-		// Check for running executions in persistent storage first
-		// This is the source of truth and survives node restarts
-		ctx := context.Background()
-		runningExecs, err := j.Agent.Store.GetRunningExecutions(ctx, j.Name)
-		if err != nil {
-			logger.WithError(err).Error("job: Error querying for running executions in storage")
-			return false
-		}
-
-		if len(runningExecs) > 0 {
-			logger.WithFields(logrus.Fields{
-				"job":            j.Name,
-				"concurrency":    j.Concurrency,
-				"job_status":     j.Status,
-				"running_count":  len(runningExecs),
-			}).Info("job: Skipping concurrent execution (found running executions in storage)")
-			return false
-		}
-
-		// Also check in-memory activeExecutions as a secondary check
-		// This catches executions that just started and may not be in storage yet
+		// Check in-memory active executions first - these are definitely running
 		exs, err := j.Agent.GetActiveExecutions()
 		if err != nil {
 			logger.WithError(err).Error("job: Error querying for active executions")
@@ -457,6 +443,70 @@ func (j *Job) isRunnable(logger *logrus.Entry) bool {
 				}).Info("job: Skipping concurrent execution (found in active executions)")
 				return false
 			}
+		}
+
+		// Check persistent storage for running executions
+		// This catches executions that might be running on nodes after a leader change
+		ctx := context.Background()
+		runningExecs, err := j.Agent.Store.GetRunningExecutions(ctx, j.Name)
+		if err != nil {
+			logger.WithError(err).Error("job: Error querying for running executions in storage")
+			return false
+		}
+
+		for _, exec := range runningExecs {
+			// Execution is in storage but not in active memory.
+			// If it has been running longer than the stale threshold, clean it up.
+			runningFor := time.Now().UTC().Sub(exec.StartedAt)
+			if runningFor > DefaultStaleExecutionThreshold {
+				logger.WithFields(logrus.Fields{
+					"job":         j.Name,
+					"execution":   exec.Key(),
+					"node":        exec.NodeName,
+					"started_at":  exec.StartedAt,
+					"running_for": runningFor.String(),
+				}).Warn("job: Cleaning up stale execution from storage")
+
+				exec.FinishedAt = time.Now().UTC()
+				exec.Success = false
+				exec.Output += "\nExecution marked as failed: detected as stale (not active on any node)"
+
+				execDoneReq := &proto.ExecutionDoneRequest{
+					Execution: exec.ToProto(),
+				}
+				cmd, err := Encode(ExecutionDoneType, execDoneReq)
+				if err != nil {
+					logger.WithError(err).WithFields(logrus.Fields{
+						"execution": exec.Key(),
+						"node":      exec.NodeName,
+					}).Error("job: Error encoding stale execution cleanup")
+					continue
+				}
+				af := j.Agent.RaftApply(cmd)
+				if af != nil {
+					if err := af.Error(); err != nil {
+						logger.WithError(err).WithFields(logrus.Fields{
+							"execution": exec.Key(),
+							"node":      exec.NodeName,
+						}).Error("job: Error applying stale execution cleanup")
+					}
+				}
+				continue
+			}
+
+			// Execution is not in active memory but hasn't exceeded the stale threshold.
+			// Conservatively block to avoid potential concurrent execution.
+			logger.WithFields(logrus.Fields{
+				"job":           j.Name,
+				"concurrency":   j.Concurrency,
+				"job_status":    j.Status,
+				"running_count": len(runningExecs),
+				"execution":     exec.Key(),
+				"node":          exec.NodeName,
+				"started_at":    exec.StartedAt,
+				"running_for":   runningFor.String(),
+			}).Info("job: Skipping concurrent execution (found running execution in storage)")
+			return false
 		}
 	}
 

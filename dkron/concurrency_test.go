@@ -164,6 +164,117 @@ func TestConcurrencyForbid_MultipleNodes(t *testing.T) {
 	assert.Equal(t, "node-2", runningExecs[0].NodeName)
 }
 
+// TestConcurrencyForbid_StaleExecutionCleanup tests that stale executions in storage
+// are automatically cleaned up when they exceed the stale threshold and are not
+// found in active in-memory executions. This addresses the issue where a crashed
+// node leaves a "running" execution in storage that permanently blocks the job.
+func TestConcurrencyForbid_StaleExecutionCleanup(t *testing.T) {
+	log := getTestLogger()
+	s, err := NewStore(log, otel.Tracer("test"))
+	require.NoError(t, err)
+	defer s.Shutdown() // nolint: errcheck
+
+	ctx := context.Background()
+
+	// Create a test job with forbid concurrency
+	testJob := &Job{
+		Name:           "stale-exec-job",
+		Schedule:       "@every 10s",
+		Executor:       "shell",
+		ExecutorConfig: map[string]string{"command": "/bin/true"},
+		Disabled:       false,
+		Concurrency:    ConcurrencyForbid,
+	}
+
+	err = s.SetJob(ctx, testJob, true)
+	require.NoError(t, err)
+
+	// Simulate a stale execution: started long ago, never finished
+	staleExecution := &Execution{
+		JobName:    "stale-exec-job",
+		StartedAt:  time.Now().UTC().Add(-5 * time.Hour), // Started 5 hours ago
+		FinishedAt: time.Time{},                          // Never finished
+		Success:    false,
+		Output:     "running",
+		NodeName:   "crashed-node",
+		Group:      time.Now().UTC().Add(-5 * time.Hour).UnixNano(),
+		Attempt:    1,
+	}
+
+	_, err = s.SetExecution(ctx, staleExecution)
+	require.NoError(t, err)
+
+	// Verify the stale execution is detected as running
+	runningExecs, err := s.GetRunningExecutions(ctx, "stale-exec-job")
+	assert.NoError(t, err)
+	assert.Len(t, runningExecs, 1, "Should detect the stale execution as running")
+	assert.Equal(t, "crashed-node", runningExecs[0].NodeName)
+
+	// Verify the execution exceeds the stale threshold
+	assert.True(t, time.Since(runningExecs[0].StartedAt) > DefaultStaleExecutionThreshold,
+		"Stale execution should exceed the default threshold")
+
+	// Now simulate cleanup: mark the stale execution as done (as isRunnable would do)
+	staleExecution.FinishedAt = time.Now()
+	staleExecution.Success = false
+	staleExecution.Output += "\nExecution marked as failed: detected as stale (not active on any node)"
+	_, err = s.SetExecutionDone(ctx, staleExecution)
+	require.NoError(t, err)
+
+	// Verify no more running executions
+	runningExecs, err = s.GetRunningExecutions(ctx, "stale-exec-job")
+	assert.NoError(t, err)
+	assert.Empty(t, runningExecs, "Should have no running executions after cleanup")
+}
+
+// TestConcurrencyForbid_RecentExecutionNotCleaned tests that recent "running" executions
+// (within the stale threshold) are NOT cleaned up, preserving the concurrency block.
+func TestConcurrencyForbid_RecentExecutionNotCleaned(t *testing.T) {
+	log := getTestLogger()
+	s, err := NewStore(log, otel.Tracer("test"))
+	require.NoError(t, err)
+	defer s.Shutdown() // nolint: errcheck
+
+	ctx := context.Background()
+
+	// Create a test job with forbid concurrency
+	testJob := &Job{
+		Name:           "recent-exec-job",
+		Schedule:       "@every 10s",
+		Executor:       "shell",
+		ExecutorConfig: map[string]string{"command": "/bin/sleep 60"},
+		Disabled:       false,
+		Concurrency:    ConcurrencyForbid,
+	}
+
+	err = s.SetJob(ctx, testJob, true)
+	require.NoError(t, err)
+
+	// Simulate a recent running execution (within threshold)
+	recentExecution := &Execution{
+		JobName:    "recent-exec-job",
+		StartedAt:  time.Now().UTC().Add(-10 * time.Minute), // Started 10 minutes ago
+		FinishedAt: time.Time{},                             // Not finished
+		Success:    false,
+		Output:     "running",
+		NodeName:   "active-node",
+		Group:      time.Now().UTC().Add(-10 * time.Minute).UnixNano(),
+		Attempt:    1,
+	}
+
+	_, err = s.SetExecution(ctx, recentExecution)
+	require.NoError(t, err)
+
+	// Verify the execution is detected as running
+	runningExecs, err := s.GetRunningExecutions(ctx, "recent-exec-job")
+	assert.NoError(t, err)
+	assert.Len(t, runningExecs, 1, "Should detect the recent execution as running")
+
+	// Verify the execution does NOT exceed the stale threshold
+	assert.True(t, time.Since(runningExecs[0].StartedAt) < DefaultStaleExecutionThreshold,
+		"Recent execution should NOT exceed the default threshold")
+}
+
 // TestConcurrencyAllow_NotAffected tests that allow concurrency is not affected by our changes
 func TestConcurrencyAllow_NotAffected(t *testing.T) {
 	log := getTestLogger()
