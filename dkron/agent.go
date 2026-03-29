@@ -18,8 +18,8 @@ import (
 	"github.com/devopsfaith/krakend-usage/client"
 	typesv1 "github.com/distribworks/dkron/v4/gen/proto/types/v1"
 	"github.com/distribworks/dkron/v4/plugin"
-	goplugin "github.com/hashicorp/go-plugin"
 	"github.com/hashicorp/go-metrics"
+	goplugin "github.com/hashicorp/go-plugin"
 	"github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/memberlist"
 	"github.com/hashicorp/raft"
@@ -883,6 +883,77 @@ func (a *Agent) RaftApply(cmd []byte) raft.ApplyFuture {
 		return nil
 	}
 	return a.raft.Apply(cmd, raftTimeout)
+}
+
+func activeExecutionKeys(executions []*typesv1.Execution) map[string]struct{} {
+	keys := make(map[string]struct{}, len(executions))
+	for _, execution := range executions {
+		keys[execution.Key()] = struct{}{}
+	}
+
+	return keys
+}
+
+func (a *Agent) markExecutionDone(execution *Execution) error {
+	execDoneReq := &typesv1.ExecutionDoneRequest{
+		Execution: execution.ToProto(),
+	}
+
+	cmd, err := Encode(ExecutionDoneType, execDoneReq)
+	if err != nil {
+		return err
+	}
+
+	af := a.RaftApply(cmd)
+	if af == nil {
+		return errors.New("raft apply unavailable")
+	}
+
+	return af.Error()
+}
+
+func (a *Agent) cleanupStaleRunningExecutions(ctx context.Context, jobName string, activeExecutionKeys map[string]struct{}, logger *logrus.Entry, staleLogMessage string) ([]*Execution, error) {
+	runningExecs, err := a.Store.GetRunningExecutions(ctx, jobName)
+	if err != nil {
+		return nil, err
+	}
+
+	remainingRunning := make([]*Execution, 0)
+	now := time.Now().UTC()
+
+	for _, exec := range runningExecs {
+		if _, ok := activeExecutionKeys[exec.Key()]; ok {
+			continue
+		}
+
+		runningFor := now.Sub(exec.StartedAt)
+		if runningFor <= DefaultStaleExecutionThreshold {
+			remainingRunning = append(remainingRunning, exec)
+			continue
+		}
+
+		logger.WithFields(logrus.Fields{
+			"job":         jobName,
+			"execution":   exec.Key(),
+			"node":        exec.NodeName,
+			"started_at":  exec.StartedAt,
+			"running_for": runningFor.String(),
+		}).Warn(staleLogMessage)
+
+		exec.FinishedAt = now
+		exec.Success = false
+		exec.Output += "\nExecution marked as failed: detected as stale (not active on any node)"
+
+		if err := a.markExecutionDone(exec); err != nil {
+			logger.WithError(err).WithFields(logrus.Fields{
+				"execution": exec.Key(),
+				"node":      exec.NodeName,
+			}).Error("agent: Error applying stale execution cleanup")
+			remainingRunning = append(remainingRunning, exec)
+		}
+	}
+
+	return remainingRunning, nil
 }
 
 // GetRunningJobs returns amount of active jobs of the local agent
