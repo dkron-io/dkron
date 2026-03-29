@@ -350,9 +350,9 @@ When updating Go version in workflow:
 
 1. Update `.github/workflows/test.yml`:
    ```yaml
-   - uses: actions/setup-go@v5
+   - uses: actions/setup-go@v6
      with:
-       go-version: 1.23.1  # Update this
+       go-version: '1.26.1'  # Update this
    ```
 
 2. Test locally with the same version:

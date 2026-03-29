@@ -1,8 +1,8 @@
 module github.com/distribworks/dkron/v4/client
 
-go 1.24.0
+go 1.26.0
 
-toolchain go1.24.11
+toolchain go1.26.1
 
 // For local development
 // replace github.com/distribworks/dkron/v4 => ../

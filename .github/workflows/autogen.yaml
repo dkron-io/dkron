@@ -70,9 +70,9 @@ jobs:
           ref: ${{ github.head_ref }}
 
       - name: Setup Go
-        uses: actions/setup-go@v5
+        uses: actions/setup-go@v6
         with:
-          go-version: 1.23.0
+          go-version: '1.26.1'
 
       - name: Install Oapi Codegen and generate client
         run: |
