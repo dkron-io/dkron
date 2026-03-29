@@ -5,7 +5,7 @@ $(LINUX_PKGS):
 	fury push --as distribworks $@
 
 PACKAGE_NAME          := github.com/distribworks/dkron
-GOLANG_CROSS_VERSION  ?= v1.22
+GOLANG_CROSS_VERSION  ?= v1.26
 
 .PHONY: release-dry-run
 release-dry-run:
