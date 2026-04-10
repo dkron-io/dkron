@@ -14,26 +14,30 @@ This guide is for recovery from a Dkron outage due to a majority of server nodes
 
 ## Failure of a Single Server Cluster
 
-If you had only a single server and it has failed, simply restart it. A single server configuration requires the -bootstrap-expect=1 flag. If the server cannot be recovered, you need to bring up a new server. See the [clustering](/docs/usage/clustering) guide for more detail.
+If you had only a single server and it has failed, first try to restart it. A single-server deployment requires `--bootstrap-expect=1`. If that server is unrecoverable, you need to rebuild the cluster on a new server and restore jobs from backup if you have one.
 
 In the case of an unrecoverable server failure in a single server cluster, data loss is inevitable since data was not replicated to any other servers. This is why a single server deploy is never recommended.
 
 ## Failure of a Server in a Multi-Server Cluster
 
-If you think the failed server is recoverable, the easiest option is to bring it back online and have it rejoin the cluster with the same IP address, returning the cluster to a fully healthy state. Similarly, even if you need to rebuild a new Dkron server to replace the failed node, you may wish to do that immediately. Keep in mind that the rebuilt server needs to have the same IP address as the failed server. Again, once this server is online and has rejoined, the cluster will return to a fully healthy state.
+If you think the failed server is recoverable, the safest option is usually to bring it back online and let it rejoin the cluster. If you need to replace it, add the replacement server carefully and confirm the cluster is healthy before removing anything else.
 
-Both of these strategies involve a potentially lengthy time to reboot or rebuild a failed server. If this is impractical or if building a new server with the same IP isn't an option, you need to remove the failed server. Usually, you can issue a `dkron leave` command to remove the failed server if it's still a member of the cluster.
+If the failed server will not come back, remove the stale peer from the Raft configuration. If the node is still reachable, `dkron leave` is the cleanest option. If it is gone completely, use `dkron raft remove-peer` after identifying the stale peer ID.
 
-If `dkron leave` isn't able to remove the server, you can use the `dkron raft remove-peer` command to remove the stale peer server on the fly with no downtime.
+You can use `dkron raft list-peers` to inspect the current Raft configuration:
 
-You can use the `dkron raft list-peers` command to inspect the Raft configuration:
-
-```
+```bash
 $ dkron raft list-peers
 Node                   ID               Address          State     Voter
-dkron-server01.global  10.10.11.5:4647  10.10.11.5:4647  follower  true
-dkron-server02.global  10.10.11.6:4647  10.10.11.6:4647  leader    true
-dkron-server03.global  10.10.11.7:4647  10.10.11.7:4647  follower  true
+dkron-server01.global  dkron-server01.global  10.10.11.5:6868  follower  true
+dkron-server02.global  dkron-server02.global  10.10.11.6:6868  leader    true
+dkron-server03.global  dkron-server03.global  10.10.11.7:6868  follower  true
+```
+
+Then remove the failed peer if needed:
+
+```bash
+dkron raft remove-peer --peer-id <peer-id>
 ```
 
 ## Failure of Multiple Servers in a Multi-Server Cluster
@@ -50,40 +54,45 @@ The raft/peers.json recovery file is final, and a snapshot is taken after it is 
 
 ## Manual Recovery Using peers.json
 
-To begin, stop all remaining servers. You can attempt a graceful leave, but it will not work in most cases. Do not worry if the leave exits with an error. The cluster is in an unhealthy state, so this is expected.
+Use this procedure only after a real outage that has already caused quorum loss.
 
-The peers.json file will be deleted after Dkron starts and ingests this file.
+1. Stop all remaining server nodes.
+2. Back up the `data-dir` from each remaining server before changing anything.
+3. Create the same `raft/peers.json` file on each remaining server.
+4. Start the remaining servers and wait for a leader election.
+5. Verify the recovered peer set with `dkron raft list-peers`.
 
 Using raft/peers.json for recovery can cause uncommitted Raft log entries to be implicitly committed, so this should only be used after an outage where no other option is available to recover a lost server. Make sure you don't have any automated processes that will put the peers file in place on a periodic basis.
 
-The next step is to go to the `data-dir` of each Dkron server. Inside that directory, there will be a raft/ sub-directory. We need to create a raft/peers.json file. It should look something like:
+Go to the `data-dir` of each remaining server. Inside that directory, create `raft/peers.json`. It should look like this:
 
 ```json
 [
   {
     "id": "node1",
-    "address": "10.1.0.1:4647"
+    "address": "10.1.0.1:6868"
   },
   {
     "id": "node2",
-    "address": "10.1.0.2:4647"
+    "address": "10.1.0.2:6868"
   },
   {
     "id": "node3",
-    "address": "10.1.0.3:4647"
+    "address": "10.1.0.3:6868"
   }
 ]
 ```
 
-Simply create entries for all remaining servers. You must confirm that servers you do not include here have indeed failed and will not later rejoin the cluster. Ensure that this file is the same across all remaining server nodes.
+Create entries only for the surviving servers that should remain in the recovered cluster. You must confirm that excluded servers are truly gone or intentionally left out of the recovered cluster. The `peers.json` file must be identical on every remaining server.
 
-At this point, you can restart all the remaining servers. In Dkron 0.5.5 and later you will see them ingest recovery file:
+When Dkron starts and ingests the recovery file, it deletes `peers.json` automatically after successful recovery. You should see log messages similar to:
 
 ```
-Recovery log placeholder
+found peers.json file, recovering Raft configuration...
+deleted peers.json file after successful recovery
 ```
 
-It should be noted that any existing member can be used to rejoin the cluster as the gossip protocol will take care of discovering the server nodes.
+Once the cluster is healthy again, you can add replacement servers in the normal way.
 
 At this point, the cluster should be in an operable state again. One of the nodes should claim leadership and emit a log like:
 
@@ -91,14 +100,16 @@ At this point, the cluster should be in an operable state again. One of the node
 
 You can use the `dkron raft list-peers` command to inspect the Raft configuration:
 
-```
+```bash
 $ dkron raft list-peers
 Node   ID     Address          State     Voter
-node1  node1  10.10.11.5:4647  follower  true
-node2  node2  10.10.11.6:4647  leader    true
-node3  node3  10.10.11.7:4647  follower  true
+node1  node1  10.10.11.5:6868  follower  true
+node2  node2  10.10.11.6:6868  leader    true
+node3  node3  10.10.11.7:6868  follower  true
 ```
 
-* id (string: ) - Specifies the node ID of the server. This is the `name` of the node.
+`id` is the node ID used by the server. `address` is the server communication address in `ip:port` format, typically using the node's RPC port.
 
-* address (string: ) - Specifies the IP and port of the server in ip:port format. The port is the server's gRPC port used for cluster communications, typically `6868`.
+:::warning
+Do not use `raft/peers.json` as a routine cluster management tool. It is a last-resort recovery path for quorum loss.
+:::

@@ -6,4 +6,4 @@ title: Upgrade from v2.0.x to v2.2.x
 
 To migrate jobs from v2.0.x to v2.2.x, export jobs from the v2.0.x cluster and import them into v2.2.x
 
-Refer to the [backup&restore upgrade guide](/docs/usage/upgrade#backup--restore)
+Refer to the [backup and restore upgrade guide](/docs/usage/upgrade#backup-and-restore)
