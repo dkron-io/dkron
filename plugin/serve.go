@@ -30,13 +30,22 @@ func Serve(opts *ServeOpts) {
 	plugin.Serve(&plugin.ServeConfig{
 		HandshakeConfig: Handshake,
 		Plugins:         pluginMap(opts),
+		GRPCServer:      plugin.DefaultGRPCServer,
 	})
 }
 
 // pluginMap returns the map[string]plugin.Plugin to use for configuring a plugin
 // server or client.
 func pluginMap(opts *ServeOpts) map[string]plugin.Plugin {
-	return map[string]plugin.Plugin{
-		"processor": &ProcessorPlugin{Processor: opts.Processor},
+	plugins := map[string]plugin.Plugin{}
+
+	if opts.Processor != nil {
+		plugins[ProcessorPluginName] = &ProcessorPlugin{Processor: opts.Processor}
 	}
+
+	if opts.Executor != nil {
+		plugins[ExecutorPluginName] = &ExecutorPlugin{Executor: opts.Executor}
+	}
+
+	return plugins
 }
