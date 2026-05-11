@@ -8,7 +8,7 @@ require (
 	github.com/fluent/fluent-logger-golang v1.10.1
 	github.com/fullstorydev/grpcurl v1.9.3
 	github.com/gin-contrib/cors v1.7.6
-	github.com/gin-contrib/expvar v1.0.3
+	github.com/gin-contrib/expvar v1.0.4
 	github.com/gin-gonic/gin v1.12.0
 	github.com/hashicorp/go-discover v1.1.0
 	github.com/hashicorp/go-hclog v1.6.3
