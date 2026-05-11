@@ -455,7 +455,7 @@ func (grpcc *GRPCClient) AgentRun(addr string, job *typesv1.Job, execution *type
 			if backoff > maxInterval {
 				backoff = maxInterval
 			}
-			
+
 			grpcc.logger.WithError(lastErr).WithFields(logrus.Fields{
 				"attempt":        attempt + 1,
 				"total_attempts": maxRetries + 1,
@@ -463,7 +463,7 @@ func (grpcc *GRPCClient) AgentRun(addr string, job *typesv1.Job, execution *type
 				"job":            job.Name,
 				"node":           addr,
 			}).Warn("grpc: Retrying AgentRun after failure")
-			
+
 			time.Sleep(backoff)
 		}
 
@@ -579,7 +579,9 @@ func (grpcc *GRPCClient) agentRunAttempt(addr string, job *typesv1.Job, executio
 			if err := grpcc.ExecutionDone(string(addr), NewExecutionFromProto(execution)); err != nil {
 				return err
 			}
-			return err
+			// The remote execution has already started and its failed result was recorded.
+			// Do not let the outer AgentRun retry loop dispatch the same execution again.
+			return nil
 		}
 
 		// Registers an active stream

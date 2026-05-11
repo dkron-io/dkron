@@ -9,7 +9,7 @@ export const TagsField = () => {
         return (
             <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
                 {Object.keys(record.Tags).map(key => (
-                    <Chip 
+                    <Chip
                         key={key}
                         label={`${key}: ${record.Tags[key]}`}
                         size="small"

@@ -65,7 +65,7 @@ const CardWithIcon = ({ icon, title, subtitle, to, children, color = '#3182ce' }
                         backgroundColor: alpha(color, 0.05),
                     }}
                 />
-                
+
                 {/* Icon */}
                 <Box
                     sx={{
@@ -82,13 +82,13 @@ const CardWithIcon = ({ icon, title, subtitle, to, children, color = '#3182ce' }
                 >
                     {createElement(icon, { sx: { fontSize: 24 } })}
                 </Box>
-                
+
                 {/* Content */}
                 <Box sx={{ position: 'relative', zIndex: 1 }}>
-                    <Typography 
-                        variant="h4" 
+                    <Typography
+                        variant="h4"
                         component="div"
-                        sx={{ 
+                        sx={{
                             fontWeight: 700,
                             color: 'text.primary',
                             mb: 0.5,
@@ -97,9 +97,9 @@ const CardWithIcon = ({ icon, title, subtitle, to, children, color = '#3182ce' }
                     >
                         {subtitle || '0'}
                     </Typography>
-                    <Typography 
-                        variant="body2" 
-                        sx={{ 
+                    <Typography
+                        variant="body2"
+                        sx={{
                             color: 'text.secondary',
                             fontWeight: 500,
                         }}

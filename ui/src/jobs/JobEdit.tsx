@@ -1,4 +1,4 @@
-import { 
+import {
     Edit,
     SelectInput,
     TextInput,
@@ -31,7 +31,7 @@ const JobCreateActions = () => (
 export const JobEdit = () => {
     const record = useRecordContext();
     return (
-        <Edit 
+        <Edit
             {...record}
             actions={<JobEditActions />}
             sx={{
@@ -46,7 +46,7 @@ export const JobEdit = () => {
 }
 
 export const JobCreate = (props: any) => (
-    <Create 
+    <Create
         {...props}
         actions={<JobCreateActions />}
         sx={{
@@ -72,7 +72,7 @@ const EditForm = (record: any) => (
         <BooleanInput source="ephemeral" helperText="Delete the job after the first successful execution." />
         <DateTimeInput source="starts_at" helperText="The job will not be executed before this time." />
         <DateTimeInput source="expires_at" helperText="The job will not be executed after this time." />
-        <SelectInput source="concurrency" 
+        <SelectInput source="concurrency"
             choices={[
                 { id: 'allow', name: 'Allow' },
                 { id: 'forbid', name: 'Forbid' },

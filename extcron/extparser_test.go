@@ -39,13 +39,13 @@ func TestAfterScheduleParsing(t *testing.T) {
 		name     string
 		expr     string
 		wantErr  bool
-		expected AfterSchedule
+		expected *AfterSchedule
 	}{
 		{
 			name:    "valid @after with 2 hour grace period",
 			expr:    "@after 2020-01-01T00:00:00Z <PT2H",
 			wantErr: false,
-			expected: AfterSchedule{
+			expected: &AfterSchedule{
 				Date:        time.Date(2020, time.January, 1, 0, 0, 0, 0, time.UTC),
 				GracePeriod: 2 * time.Hour,
 			},
@@ -54,7 +54,7 @@ func TestAfterScheduleParsing(t *testing.T) {
 			name:    "valid @after with 1 day grace period",
 			expr:    "@after 2020-01-01T12:00:00Z <P1D",
 			wantErr: false,
-			expected: AfterSchedule{
+			expected: &AfterSchedule{
 				Date:        time.Date(2020, time.January, 1, 12, 0, 0, 0, time.UTC),
 				GracePeriod: 24 * time.Hour,
 			},
@@ -63,7 +63,7 @@ func TestAfterScheduleParsing(t *testing.T) {
 			name:    "valid @after with complex duration",
 			expr:    "@after 2020-01-01T00:00:00Z <P1DT2H30M",
 			wantErr: false,
-			expected: AfterSchedule{
+			expected: &AfterSchedule{
 				Date:        time.Date(2020, time.January, 1, 0, 0, 0, 0, time.UTC),
 				GracePeriod: 26*time.Hour + 30*time.Minute,
 			},
@@ -102,7 +102,7 @@ func TestAfterScheduleParsing(t *testing.T) {
 				require.Error(t, err)
 			} else {
 				require.NoError(t, err)
-				afterSchedule, ok := actual.(AfterSchedule)
+				afterSchedule, ok := actual.(*AfterSchedule)
 				require.True(t, ok, "Expected AfterSchedule type")
 				assert.Equal(t, tt.expected.Date, afterSchedule.Date)
 				assert.Equal(t, tt.expected.GracePeriod, afterSchedule.GracePeriod)

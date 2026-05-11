@@ -30,11 +30,11 @@ const Dashboard = () => {
         <Box sx={{ p: { xs: 2, md: 3 } }}>
             {/* Header Section */}
             <Box sx={{ mb: 4 }}>
-                <Typography 
-                    variant="h4" 
-                    component="h1" 
-                    sx={{ 
-                        fontWeight: 700, 
+                <Typography
+                    variant="h4"
+                    component="h1"
+                    sx={{
+                        fontWeight: 700,
                         color: 'text.primary',
                         mb: 1,
                         fontSize: { xs: '1.75rem', md: '2.125rem' }
@@ -42,8 +42,8 @@ const Dashboard = () => {
                 >
                     Dashboard
                 </Typography>
-                <Typography 
-                    variant="body1" 
+                <Typography
+                    variant="body1"
                     sx={{ color: 'text.secondary' }}
                 >
                     Monitor your distributed job scheduler at a glance
@@ -51,8 +51,8 @@ const Dashboard = () => {
             </Box>
 
             {/* Stats Grid */}
-            <Box 
-                sx={{ 
+            <Box
+                sx={{
                     display: 'grid',
                     gridTemplateColumns: {
                         xs: '1fr',
@@ -78,9 +78,9 @@ const Dashboard = () => {
 
             {/* Nodes Section */}
             <Card>
-                <Box 
-                    sx={{ 
-                        p: 3, 
+                <Box
+                    sx={{
+                        p: 3,
                         borderBottom: '1px solid',
                         borderColor: 'divider',
                         display: 'flex',
@@ -88,10 +88,10 @@ const Dashboard = () => {
                         gap: 2
                     }}
                 >
-                    <Box 
-                        sx={{ 
-                            width: 44, 
-                            height: 44, 
+                    <Box
+                        sx={{
+                            width: 44,
+                            height: 44,
                             borderRadius: 2,
                             background: 'linear-gradient(135deg, #1a365d 0%, #2c5282 100%)',
                             display: 'flex',
@@ -104,14 +104,14 @@ const Dashboard = () => {
                         <DnsIcon />
                     </Box>
                     <Box>
-                        <Typography 
-                            variant="h6" 
+                        <Typography
+                            variant="h6"
                             sx={{ fontWeight: 600, color: 'text.primary' }}
                         >
                             Cluster Nodes
                         </Typography>
-                        <Typography 
-                            variant="body2" 
+                        <Typography
+                            variant="body2"
                             sx={{ color: 'text.secondary' }}
                         >
                             Active members in your Dkron cluster
@@ -120,7 +120,7 @@ const Dashboard = () => {
                 </Box>
                 <CardContent sx={{ p: 0, '&:last-child': { pb: 0 } }}>
                     <List {...fakeProps}>
-                        <Datagrid 
+                        <Datagrid
                             isRowSelectable={selectRowDisabled}
                             sx={{
                                 '& .RaDatagrid-headerCell': {

@@ -23,19 +23,19 @@ import UpdateIcon from '@mui/icons-material/Update';
 
 const JobFilter = (props: any) => (
     <Filter {...props}>
-        <TextInput 
-            label="Search" 
-            source="q" 
-            alwaysOn 
+        <TextInput
+            label="Search"
+            source="q"
+            alwaysOn
             sx={{ ml: 2 }}
         />
-        <SelectInput 
-            source="status" 
+        <SelectInput
+            source="status"
             choices={[
                 { id: 'success', name: 'Success' },
                 { id: 'failed', name: 'Failed' },
                 { id: 'untriggered', name: 'Waiting to Run' },
-            ]} 
+            ]}
         />
         <BooleanInput source="disabled"/>
     </Filter>
@@ -87,18 +87,18 @@ const StyledDatagrid = styled(Datagrid)(({ theme }) => ({
 }));
 
 const ListHeader = () => (
-    <Box 
-        sx={{ 
+    <Box
+        sx={{
             mb: 3,
             display: 'flex',
             alignItems: 'center',
             gap: 2,
         }}
     >
-        <Box 
-            sx={{ 
-                width: 48, 
-                height: 48, 
+        <Box
+            sx={{
+                width: 48,
+                height: 48,
                 borderRadius: 2,
                 background: 'linear-gradient(135deg, #3182ce 0%, #2c5282 100%)',
                 display: 'flex',
@@ -111,14 +111,14 @@ const ListHeader = () => (
             <UpdateIcon />
         </Box>
         <Box>
-            <Typography 
-                variant="h5" 
+            <Typography
+                variant="h5"
                 sx={{ fontWeight: 600, color: 'text.primary' }}
             >
                 Scheduled Jobs
             </Typography>
-            <Typography 
-                variant="body2" 
+            <Typography
+                variant="body2"
                 sx={{ color: 'text.secondary' }}
             >
                 Manage your distributed cron jobs
@@ -131,9 +131,9 @@ const JobList = (props: any) => {
     return (
         <Box sx={{ p: { xs: 2, md: 3 } }}>
             <ListHeader />
-            <List 
-                {...props} 
-                filters={<JobFilter />} 
+            <List
+                {...props}
+                filters={<JobFilter />}
                 pagination={<JobPagination />}
                 sx={{
                     '& .RaList-main': {
@@ -153,10 +153,10 @@ const JobList = (props: any) => {
                         cellClassName={classes.hiddenOnSmallScreens}
                         headerClassName={classes.hiddenOnSmallScreens} />
                     <TextField source="schedule" />
-                    <NumberField source="success_count" 
+                    <NumberField source="success_count"
                         cellClassName={classes.hiddenOnSmallScreens}
                         headerClassName={classes.hiddenOnSmallScreens} />
-                    <NumberField source="error_count" 
+                    <NumberField source="error_count"
                         cellClassName={classes.hiddenOnSmallScreens}
                         headerClassName={classes.hiddenOnSmallScreens} />
                     <DateField source="last_success" showTime />

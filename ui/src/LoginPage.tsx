@@ -6,7 +6,7 @@ import {
     useSafeSetState,
 } from 'react-admin';
 import { styled } from '@mui/material/styles';
-import { 
+import {
     Button,
     CardContent,
     CircularProgress,
@@ -38,25 +38,25 @@ const LoginPage = (props: LoginFormProps) => {
         <Root>
             <Card className={LoginClasses.card}>
                 <Box sx={{ pt: 4, pb: 2, px: 4, textAlign: 'center' }}>
-                    <Box 
-                        sx={{ 
+                    <Box
+                        sx={{
                             mb: 3,
                             display: 'flex',
                             justifyContent: 'center',
                         }}
                     >
-                        <img 
-                            src={logo} 
-                            alt="Dkron" 
-                            style={{ 
+                        <img
+                            src={logo}
+                            alt="Dkron"
+                            style={{
                                 maxWidth: 140,
-                            }} 
+                            }}
                         />
                     </Box>
-                    <Typography 
-                        variant="h5" 
+                    <Typography
+                        variant="h5"
                         component="h1"
-                        sx={{ 
+                        sx={{
                             fontWeight: 600,
                             color: 'text.primary',
                             mb: 1,
@@ -64,8 +64,8 @@ const LoginPage = (props: LoginFormProps) => {
                     >
                         Welcome Back
                     </Typography>
-                    <Typography 
-                        variant="body2" 
+                    <Typography
+                        variant="body2"
                         sx={{ color: 'text.secondary' }}
                     >
                         Sign in to access your job scheduler
@@ -121,10 +121,10 @@ const LoginPage = (props: LoginFormProps) => {
                     </CardContent>
                 </form>
             </Card>
-            <Typography 
-                variant="body2" 
-                sx={{ 
-                    mt: 4, 
+            <Typography
+                variant="body2"
+                sx={{
+                    mt: 4,
                     color: 'rgba(255, 255, 255, 0.6)',
                     textAlign: 'center',
                 }}

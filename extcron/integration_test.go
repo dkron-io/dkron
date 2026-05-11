@@ -35,11 +35,11 @@ func TestAfterScheduleEndToEnd(t *testing.T) {
 			description:     "Job created 1 hour after scheduled time (within 2h grace) should run immediately",
 		},
 		{
-			name:         "past job at end of grace period should run immediately",
-			schedule:     "@after 2025-01-01T00:00:00Z <PT2H",
-			currentTime:  time.Date(2025, 1, 1, 1, 59, 59, 0, time.UTC),
+			name:            "past job at end of grace period should run immediately",
+			schedule:        "@after 2025-01-01T00:00:00Z <PT2H",
+			currentTime:     time.Date(2025, 1, 1, 1, 59, 59, 0, time.UTC),
 			expectImmediate: true,
-			description:  "Job created just before end of grace period should run immediately",
+			description:     "Job created just before end of grace period should run immediately",
 		},
 		{
 			name:        "past job beyond grace period should never run",
@@ -49,11 +49,11 @@ func TestAfterScheduleEndToEnd(t *testing.T) {
 			description: "Job created 1 second after grace period should never run",
 		},
 		{
-			name:         "exactly at scheduled time should run immediately",
-			schedule:     "@after 2025-01-01T00:00:00Z <PT2H",
-			currentTime:  time.Date(2025, 1, 1, 0, 0, 0, 0, time.UTC),
+			name:            "exactly at scheduled time should run immediately",
+			schedule:        "@after 2025-01-01T00:00:00Z <PT2H",
+			currentTime:     time.Date(2025, 1, 1, 0, 0, 0, 0, time.UTC),
 			expectImmediate: true,
-			description:  "Job created exactly at scheduled time should run immediately",
+			description:     "Job created exactly at scheduled time should run immediately",
 		},
 		{
 			name:            "small grace period example",
@@ -88,8 +88,8 @@ func TestAfterScheduleEndToEnd(t *testing.T) {
 			nextRun := schedule.Next(tt.currentTime)
 
 			if tt.expectImmediate {
-				// Should run immediately (next run == current time)
-				assert.Equal(t, tt.currentTime, nextRun, tt.description)
+				// Should run near-immediately while honoring cron.Schedule's next-after-current contract.
+				assert.Equal(t, tt.currentTime.Add(time.Nanosecond), nextRun, tt.description)
 			} else if tt.expectNever {
 				// Should never run (zero time)
 				assert.True(t, nextRun.IsZero(), "Expected zero time (never run), got: %v. %s", nextRun, tt.description)
@@ -106,25 +106,25 @@ func TestAfterScheduleEndToEnd(t *testing.T) {
 func TestAfterScheduleUseCase(t *testing.T) {
 	// Scenario: User wants to create a job that runs at a specific time,
 	// but due to network latency, the job is created a few seconds after that time.
-	
+
 	// Job should run at 2025-01-01 12:00:00
 	scheduledTime := time.Date(2025, 1, 1, 12, 0, 0, 0, time.UTC)
-	
+
 	// But job is created 30 seconds late due to network latency
 	creationTime := scheduledTime.Add(30 * time.Second)
-	
+
 	// With a 5-minute grace period, the job should still run immediately
 	schedule := "@after " + scheduledTime.Format(time.RFC3339) + " <PT5M"
-	
+
 	sched, err := Parse(schedule)
 	require.NoError(t, err)
-	
+
 	nextRun := sched.Next(creationTime)
-	
+
 	// The job should run immediately (at creation time)
-	assert.Equal(t, creationTime, nextRun,
+	assert.Equal(t, creationTime.Add(time.Nanosecond), nextRun,
 		"Job created 30s late with 5min grace period should run immediately")
-	
+
 	// If the job is created much later (10 minutes), it should not run
 	lateCreationTime := scheduledTime.Add(10 * time.Minute)
 	nextRun = sched.Next(lateCreationTime)
@@ -135,28 +135,28 @@ func TestAfterScheduleUseCase(t *testing.T) {
 // TestAfterScheduleVsAtSchedule compares @after with @at behavior
 func TestAfterScheduleVsAtSchedule(t *testing.T) {
 	scheduledTime := time.Date(2025, 1, 1, 12, 0, 0, 0, time.UTC)
-	pastTime := scheduledTime.Add(-30 * time.Minute) // 30 minutes before scheduled time
+	pastTime := scheduledTime.Add(-30 * time.Minute)  // 30 minutes before scheduled time
 	futureTime := scheduledTime.Add(30 * time.Minute) // 30 minutes after scheduled time
-	
+
 	// Parse @at schedule
 	atSchedule, err := Parse("@at " + scheduledTime.Format(time.RFC3339))
 	require.NoError(t, err)
-	
+
 	// Parse @after schedule with 1 hour grace period
 	afterSchedule, err := Parse("@after " + scheduledTime.Format(time.RFC3339) + " <PT1H")
 	require.NoError(t, err)
-	
+
 	// Before scheduled time: both should return scheduled time
 	atNext := atSchedule.Next(pastTime)
 	afterNext := afterSchedule.Next(pastTime)
 	assert.Equal(t, scheduledTime, atNext, "@at should return scheduled time when before")
 	assert.Equal(t, scheduledTime, afterNext, "@after should return scheduled time when before")
-	
+
 	// After scheduled time (within grace period for @after):
 	// @at returns zero time (never runs)
-	// @after returns current time (runs immediately)
+	// @after returns near-current time (runs immediately)
 	atNext = atSchedule.Next(futureTime)
 	afterNext = afterSchedule.Next(futureTime)
 	assert.True(t, atNext.IsZero(), "@at should return zero time (never run) when after")
-	assert.Equal(t, futureTime, afterNext, "@after should return current time (run immediately) when within grace")
+	assert.Equal(t, futureTime.Add(time.Nanosecond), afterNext, "@after should return near-current time (run immediately) when within grace")
 }

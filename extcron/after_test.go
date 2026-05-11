@@ -23,25 +23,25 @@ func TestAfterScheduleNext(t *testing.T) {
 			expected:    "2020-01-01T00:00:00Z",
 		},
 		{
-			name:        "within grace period - should run immediately",
+			name:        "within grace period - should run near-immediately",
 			scheduleAt:  "2020-01-01T00:00:00Z",
 			gracePeriod: 2 * time.Hour,
 			currentTime: "2020-01-01T01:00:00Z",
-			expected:    "2020-01-01T01:00:00Z", // Returns current time (immediate)
+			expected:    "2020-01-01T01:00:00.000000001Z",
 		},
 		{
 			name:        "at end of grace period - should run immediately",
 			scheduleAt:  "2020-01-01T00:00:00Z",
 			gracePeriod: 2 * time.Hour,
 			currentTime: "2020-01-01T01:59:59Z",
-			expected:    "2020-01-01T01:59:59Z", // Returns current time (immediate)
+			expected:    "2020-01-01T01:59:59.000000001Z",
 		},
 		{
 			name:        "exactly at end of grace period - should run immediately",
 			scheduleAt:  "2020-01-01T00:00:00Z",
 			gracePeriod: 2 * time.Hour,
 			currentTime: "2020-01-01T02:00:00Z",
-			expected:    "2020-01-01T02:00:00Z", // Returns current time (immediate)
+			expected:    "2020-01-01T02:00:00.000000001Z",
 		},
 		{
 			name:        "after grace period - should never run",
@@ -55,14 +55,14 @@ func TestAfterScheduleNext(t *testing.T) {
 			scheduleAt:  "2020-01-01T00:00:00Z",
 			gracePeriod: 2 * time.Hour,
 			currentTime: "2020-01-01T00:00:00Z",
-			expected:    "2020-01-01T00:00:00Z", // Returns current time (immediate)
+			expected:    "2020-01-01T00:00:00.000000001Z",
 		},
 		{
 			name:        "small grace period",
 			scheduleAt:  "2020-01-01T12:00:00Z",
 			gracePeriod: 5 * time.Minute,
 			currentTime: "2020-01-01T12:03:00Z",
-			expected:    "2020-01-01T12:03:00Z", // Returns current time (immediate)
+			expected:    "2020-01-01T12:03:00.000000001Z",
 		},
 		{
 			name:        "past small grace period",
@@ -85,4 +85,16 @@ func TestAfterScheduleNext(t *testing.T) {
 			assert.Equal(t, expected, actual, "Expected %v, got %v", expected, actual)
 		})
 	}
+}
+
+func TestAfterScheduleRunsOnlyOnceDuringGracePeriod(t *testing.T) {
+	scheduleAt, _ := time.Parse(time.RFC3339, "2020-01-01T00:00:00Z")
+	currentTime, _ := time.Parse(time.RFC3339, "2020-01-01T01:00:00Z")
+
+	schedule := After(scheduleAt, 2*time.Hour)
+	first := schedule.Next(currentTime)
+	second := schedule.Next(first)
+
+	assert.Equal(t, currentTime.Add(time.Nanosecond), first)
+	assert.True(t, second.IsZero(), "@after should be a one-shot schedule after immediate grace-period run")
 }

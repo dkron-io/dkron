@@ -269,6 +269,7 @@ func (s *Store) SetExecutionDone(ctx context.Context, execution *Execution) (boo
 	defer span.End()
 
 	var success bool
+	var counted bool
 	err := s.db.Update(func(tx *buntdb.Tx) error {
 		// Load the job from the store
 		var pbj dkronpb.Job
@@ -285,9 +286,40 @@ func (s *Store) SetExecutionDone(ctx context.Context, execution *Execution) (boo
 
 		// Save the execution to store
 		pbe := execution.ToProto()
-		if err := s.setExecutionTxFunc(key, pbe)(tx); err != nil {
+		shouldCount := true
+		if existing, err := tx.Get(key); err != nil && err != buntdb.ErrNotFound {
+			return err
+		} else if existing != "" {
+			var previous dkronpb.Execution
+			if err := proto.Unmarshal([]byte(existing), &previous); err != nil {
+				if err := json.Unmarshal([]byte(existing), &previous); err != nil {
+					return err
+				}
+			}
+
+			previousFinishedAt := previous.GetFinishedAt().AsTime()
+			finishedAt := pbe.GetFinishedAt().AsTime()
+			if previousFinishedAt.After(finishedAt) {
+				return nil
+			}
+			if previousFinishedAt.Equal(finishedAt) && previous.GetSuccess() == pbe.GetSuccess() {
+				if pbe.GetSuccess() {
+					shouldCount = !pbj.LastSuccess.HasValue || !pbj.LastSuccess.Time.AsTime().Equal(finishedAt)
+				} else {
+					shouldCount = !pbj.LastError.HasValue || !pbj.LastError.Time.AsTime().Equal(finishedAt)
+				}
+			}
+		}
+
+		var err error
+		_, err = s.setExecutionTx(tx, key, pbe)
+		if err != nil {
 			return err
 		}
+		if !shouldCount {
+			return nil
+		}
+		counted = true
 
 		success = pbe.Success
 		if pbe.Success {
@@ -327,7 +359,7 @@ func (s *Store) SetExecutionDone(ctx context.Context, execution *Execution) (boo
 		return false, err
 	}
 
-	return true, nil
+	return counted, nil
 }
 
 func (s *Store) jobHasMetadata(job *Job, metadata map[string]string) bool {
@@ -637,38 +669,43 @@ func (s *Store) GetGroupedExecutions(ctx context.Context, jobName string, opts *
 	return groups, byGroup, nil
 }
 
-func (*Store) setExecutionTxFunc(key string, pbe *dkronpb.Execution) func(tx *buntdb.Tx) error {
+func (s *Store) setExecutionTxFunc(key string, pbe *dkronpb.Execution) func(tx *buntdb.Tx) error {
 	return func(tx *buntdb.Tx) error {
-		// Get previous execution
-		i, err := tx.Get(key)
-		if err != nil && err != buntdb.ErrNotFound {
-			return err
-		}
-		// Do nothing if a previous execution exists and is
-		// more recent, avoiding non ordered execution set
-		if i != "" {
-			var p dkronpb.Execution
-			// [TODO] This condition is temporary while we migrate to JSON marshalling for executions
-			// so we can use BuntDb indexes. To be removed in future versions.
-			if err := proto.Unmarshal([]byte(i), &p); err != nil {
-				if err := json.Unmarshal([]byte(i), &p); err != nil {
-					return err
-				}
-			}
-			// Compare existing execution
-			if p.GetFinishedAt().Seconds > pbe.GetFinishedAt().Seconds {
-				return nil
-			}
-		}
-
-		eb, err := json.Marshal(pbe)
-		if err != nil {
-			return err
-		}
-
-		_, _, err = tx.Set(key, string(eb), nil)
+		_, err := s.setExecutionTx(tx, key, pbe)
 		return err
 	}
+}
+
+func (*Store) setExecutionTx(tx *buntdb.Tx, key string, pbe *dkronpb.Execution) (bool, error) {
+	// Get previous execution
+	i, err := tx.Get(key)
+	if err != nil && err != buntdb.ErrNotFound {
+		return false, err
+	}
+	// Do nothing if a previous execution exists and is
+	// more recent, avoiding non ordered execution set
+	if i != "" {
+		var p dkronpb.Execution
+		// [TODO] This condition is temporary while we migrate to JSON marshalling for executions
+		// so we can use BuntDb indexes. To be removed in future versions.
+		if err := proto.Unmarshal([]byte(i), &p); err != nil {
+			if err := json.Unmarshal([]byte(i), &p); err != nil {
+				return false, err
+			}
+		}
+		// Compare existing execution
+		if p.GetFinishedAt().AsTime().After(pbe.GetFinishedAt().AsTime()) {
+			return false, nil
+		}
+	}
+
+	eb, err := json.Marshal(pbe)
+	if err != nil {
+		return false, err
+	}
+
+	_, _, err = tx.Set(key, string(eb), nil)
+	return err == nil, err
 }
 
 // SetExecution Save a new execution and returns the key of the new saved item or an error.
