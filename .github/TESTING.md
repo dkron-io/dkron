@@ -63,7 +63,7 @@ make test-email  # Runs email tests with MailHog
 
 ### Go Version
 
-The CI uses Go version `1.23.1`. Ensure you're testing with the same version locally:
+The CI uses Go version `1.26.1`. Ensure you're testing with the same version locally:
 
 ```bash
 go version

@@ -1,4 +1,4 @@
-FROM golang:1.24
+FROM golang:1.26
 LABEL maintainer="Victor Castell <0x@vcastellm.xyz>"
 
 EXPOSE 8080 8946
@@ -19,6 +19,6 @@ RUN go mod verify
 COPY . .
 
 RUN go install ./builtin/...
-RUN go build -tags=hashicorpmetrics -o /go/bin/dkron main.go
+RUN go build -o /go/bin/dkron main.go
 
 CMD ["dkron"]

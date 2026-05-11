@@ -5,7 +5,7 @@ $(LINUX_PKGS):
 	fury push --as distribworks $@
 
 PACKAGE_NAME          := github.com/distribworks/dkron
-GOLANG_CROSS_VERSION  ?= v1.22
+GOLANG_CROSS_VERSION  ?= v1.26
 
 .PHONY: release-dry-run
 release-dry-run:
@@ -134,4 +134,4 @@ ui: dkron/ui-dist
 main: dkron/ui-dist types/dkron.pb.go types/executor.pb.go *.go */*.go */*/*.go */*/*/*.go
 	GOBIN=`pwd` go install ./builtin/...
 	go mod tidy
-	go build -tags=hashicorpmetrics main.go
+	go build main.go

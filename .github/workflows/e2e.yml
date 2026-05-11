@@ -3,13 +3,17 @@ name: E2E Tests
 on:
   push:
     branches:
-      - "**"
+      - main
   pull_request:
     paths-ignore:
       - "**.md"
       - "website/**"
       - "docs/**"
       - "examples/**"
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
 
 jobs:
   e2e-tests:
@@ -24,9 +28,9 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Set up Go
-        uses: actions/setup-go@v5
+        uses: actions/setup-go@v6
         with:
-          go-version: 1.23.1
+          go-version: '1.26.1'
 
       - name: Install dependencies
         run: |

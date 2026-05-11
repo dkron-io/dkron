@@ -37,6 +37,12 @@ const (
 
 	// HashSymbol is the "magic" character used in scheduled to be replaced with a value based on job name
 	HashSymbol = "~"
+
+	// DefaultStaleExecutionThreshold is the duration after which a "running" execution
+	// in storage that is not found in active in-memory executions is considered stale.
+	// Stale executions are automatically cleaned up to prevent permanently blocking
+	// jobs with concurrency=forbid.
+	DefaultStaleExecutionThreshold = 4 * time.Hour
 )
 
 var (
@@ -421,27 +427,7 @@ func (j *Job) isRunnable(logger *logrus.Entry) bool {
 	}
 
 	if j.Concurrency == ConcurrencyForbid {
-		// Check for running executions in persistent storage first
-		// This is the source of truth and survives node restarts
-		ctx := context.Background()
-		runningExecs, err := j.Agent.Store.GetRunningExecutions(ctx, j.Name)
-		if err != nil {
-			logger.WithError(err).Error("job: Error querying for running executions in storage")
-			return false
-		}
-
-		if len(runningExecs) > 0 {
-			logger.WithFields(logrus.Fields{
-				"job":            j.Name,
-				"concurrency":    j.Concurrency,
-				"job_status":     j.Status,
-				"running_count":  len(runningExecs),
-			}).Info("job: Skipping concurrent execution (found running executions in storage)")
-			return false
-		}
-
-		// Also check in-memory activeExecutions as a secondary check
-		// This catches executions that just started and may not be in storage yet
+		// Check in-memory active executions first - these are definitely running
 		exs, err := j.Agent.GetActiveExecutions()
 		if err != nil {
 			logger.WithError(err).Error("job: Error querying for active executions")
@@ -457,6 +443,32 @@ func (j *Job) isRunnable(logger *logrus.Entry) bool {
 				}).Info("job: Skipping concurrent execution (found in active executions)")
 				return false
 			}
+		}
+
+		// Check persistent storage for running executions
+		// This catches executions that might be running on nodes after a leader change
+		ctx := context.Background()
+		runningExecs, err := j.Agent.cleanupStaleRunningExecutions(ctx, j.Name, activeExecutionKeys(exs), logger, "job: Cleaning up stale execution from storage")
+		if err != nil {
+			logger.WithError(err).Error("job: Error querying for running executions in storage")
+			return false
+		}
+
+		for _, exec := range runningExecs {
+			// Execution is not in active memory but hasn't exceeded the stale threshold.
+			// Conservatively block to avoid potential concurrent execution.
+			runningFor := time.Now().UTC().Sub(exec.StartedAt)
+			logger.WithFields(logrus.Fields{
+				"job":           j.Name,
+				"concurrency":   j.Concurrency,
+				"job_status":    j.Status,
+				"running_count": len(runningExecs),
+				"execution":     exec.Key(),
+				"node":          exec.NodeName,
+				"started_at":    exec.StartedAt,
+				"running_for":   runningFor.String(),
+			}).Info("job: Skipping concurrent execution (found running execution in storage)")
+			return false
 		}
 	}
 
@@ -602,34 +614,34 @@ func validateMemoryLimit(limit string) error {
 
 	// Try to parse with units
 	limit = strings.ToUpper(strings.TrimSpace(limit))
-	
+
 	// Extract the numeric part and unit
 	var numStr string
 	var unit string
-	
+
 	// Find where the number ends and unit begins
 	i := 0
 	for i < len(limit) && (limit[i] >= '0' && limit[i] <= '9' || limit[i] == '.') {
 		i++
 	}
-	
+
 	if i == 0 {
 		return fmt.Errorf("invalid memory limit format: %s", limit)
 	}
-	
+
 	numStr = limit[:i]
 	unit = limit[i:]
-	
+
 	// Parse the numeric part
 	value, err := strconv.ParseFloat(numStr, 64)
 	if err != nil {
 		return fmt.Errorf("invalid numeric value in memory limit: %s", numStr)
 	}
-	
+
 	if value <= 0 {
 		return fmt.Errorf("memory limit must be greater than 0")
 	}
-	
+
 	// Validate and convert unit to bytes
 	var multiplier int64
 	switch unit {
@@ -646,12 +658,12 @@ func validateMemoryLimit(limit string) error {
 	default:
 		return fmt.Errorf("unsupported memory unit: %s (supported: B, KB, MB, GB, TB)", unit)
 	}
-	
+
 	// Check for overflow
 	bytes := int64(value * float64(multiplier))
 	if bytes <= 0 {
 		return fmt.Errorf("memory limit too large or causes overflow")
 	}
-	
+
 	return nil
 }

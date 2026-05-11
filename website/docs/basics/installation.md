@@ -16,15 +16,17 @@ Navigate to http://localhost:8080/ui
 
 #### Debian/Ubuntu
 
-APT repository: 
+APT repository:
+
 ```
-deb [trusted=yes] https://repo.distrib.works/apt/ /
+deb [trusted=yes] https://repo.dkron.io/apt/ /
 ```
 
 Setup and install:
+
 ```bash
 # Add the repository
-echo "deb [trusted=yes] https://repo.distrib.works/apt/ /" | sudo tee /etc/apt/sources.list.d/dkron.list
+echo "deb [trusted=yes] https://repo.dkron.io/apt/ /" | sudo tee /etc/apt/sources.list.d/dkron.list
 
 # Update package list
 sudo apt-get update
@@ -40,18 +42,19 @@ YUM repository:
 ```
 [dkron]
 name=Dkron Repository
-baseurl=https://repo.distrib.works/yum/
+baseurl=https://repo.dkron.io/yum/
 enabled=1
 gpgcheck=0
 ```
 
 Setup and install:
+
 ```bash
 # Create repo file
 sudo tee /etc/yum.repos.d/dkron.repo << EOF
 [dkron]
 name=Dkron Repository
-baseurl=https://repo.distrib.works/yum/
+baseurl=https://repo.dkron.io/yum/
 enabled=1
 gpgcheck=0
 EOF
@@ -110,7 +113,7 @@ Now when you launch your container we are mounting that folder from our local fi
 For development or simple multi-node setups, Docker Compose offers an easy way to run a Dkron cluster:
 
 ```yaml
-version: '3'
+version: "3"
 services:
   dkron-leader:
     image: dkron/dkron

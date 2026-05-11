@@ -1,54 +1,96 @@
 # Raft FastLog
 
-Dkron Pro includes support for the [Raft FastLog](https://github.com/tidwall/raft-fastlog) storage engine, which provides significant performance improvements over the default BoltDB storage.
+Dkron Pro supports the [Raft FastLog](https://github.com/tidwall/raft-fastlog) storage engine for Raft state. FastLog keeps the Raft log in memory for fast access while persisting it to disk, which can reduce Raft write latency and improve throughput compared to the default BoltDB-backed Raft log.
 
 ## Overview
 
-Raft FastLog is a high-performance storage engine designed specifically for Raft consensus logs. It offers:
+FastLog is optimized for Raft's append-heavy write pattern. It is a good fit when the default Raft storage becomes a bottleneck for cluster coordination, scheduling activity, or leader-side state changes.
 
-- **Higher throughput** - Significantly faster write operations
-- **Lower latency** - Reduced response times for log operations  
-- **Better concurrency** - Improved performance under concurrent load
-- **Memory efficiency** - Optimized memory usage patterns
+Typical reasons to evaluate FastLog include:
 
-## Performance Benefits
+- **Higher Raft throughput** for write-heavy workloads
+- **Lower commit latency** for Raft log operations
+- **Faster in-memory access** to recent Raft log entries
+- **Durability tuning** through the `--raft-duration` setting
 
-FastLog typically provides:
-- 10-100x faster write performance compared to BoltDB
-- Reduced memory allocation and garbage collection pressure
-- Better scaling characteristics under high load
-- Lower CPU utilization for log operations
+FastLog is most useful when you are running busy production clusters, scheduling a high volume of jobs, or trying to reduce the overhead of Raft log persistence.
 
 ## Configuration
 
-To enable Raft FastLog, use the `--fast` command line option when starting Dkron Pro:
+Enable FastLog with the `--fast` flag when starting Dkron Pro.
+
+### CLI example
 
 ```bash
-dkron agent --fast
+dkron agent --server --bootstrap-expect=3 --fast --raft-duration=0
 ```
 
-## When to Use FastLog
+### Environment variables
 
-FastLog is recommended for:
-- High-frequency job scheduling scenarios
-- Large clusters with many nodes
-- Environments requiring low-latency job execution
-- Production deployments with performance requirements
+```bash
+DKRON_FAST=true
+DKRON_RAFT_DURATION=0
+```
 
-## Considerations
+### Config file
 
-- FastLog requires Dkron Pro license
-- Log files are not compatible between FastLog and BoltDB engines
-- Ensure adequate disk space for log storage
-- Monitor system resources during initial deployment
+```yaml
+fast: true
+raft-duration: 0
+```
 
-## Migration
+## Durability and performance tuning
 
-When switching from BoltDB to FastLog:
+The `--raft-duration` flag controls how aggressively FastLog flushes Raft log data to disk. Lower values favor performance. Higher values favor durability.
 
-1. Stop all Dkron nodes in the cluster
-2. Backup existing data
-3. Start nodes with `--fast` flag
-4. The cluster will rebuild its state from scratch
+| Value | Mode | Behavior | Trade-off |
+|-------|------|----------|-----------|
+| `-1` | Low | No explicit fsync by FastLog | Highest performance, highest risk of losing recent writes after a crash or power loss |
+| `0` | Mid | Fsync approximately once per second | Default setting and the best starting point for most deployments |
+| `1` | High | Fsync on every change | Strongest durability, lowest write throughput |
 
-**Note**: Migration requires cluster restart and state rebuild. Plan accordingly for production environments.
+For most clusters, start with `--raft-duration=0`. Move to `1` if you need the strongest durability guarantees, or test `-1` only if you fully understand the crash-recovery trade-off.
+
+## When to use FastLog
+
+FastLog is a good option when:
+
+- You are running a busy production cluster with frequent scheduling activity.
+- Raft log persistence is contributing noticeable latency.
+- You want more control over the durability/performance trade-off for Raft writes.
+- You are scaling the server side of the cluster and want to reduce Raft storage overhead.
+
+If your cluster is small and Raft storage is not a bottleneck, BoltDB may remain the simpler default choice.
+
+## Operational considerations
+
+### Storage format compatibility
+
+FastLog uses a different on-disk format than BoltDB. The Raft storage files are not interchangeable.
+
+:::warning
+Do not point a FastLog-enabled node at an existing BoltDB Raft data directory and expect it to reuse the old log files. Treat the switch as a storage migration.
+:::
+
+### Migration from BoltDB
+
+Switching an existing cluster from BoltDB to FastLog should be planned as a maintenance operation.
+
+1. Stop all Dkron server nodes in the cluster.
+2. Back up the existing `data-dir` on every node.
+3. Remove or archive the existing Raft log data.
+4. Restart the cluster with `--fast` enabled on every server node.
+5. Verify cluster health, leadership, and job scheduling after the cluster comes back.
+
+Because the storage formats differ, you should not mix old BoltDB Raft state with a FastLog deployment.
+
+### Rollout guidance
+
+- **Test in staging first** using a workload that resembles production.
+- **Monitor memory usage** because FastLog keeps the Raft log in memory for fast access.
+- **Watch disk latency and Raft health** after rollout, especially if you change `--raft-duration`.
+- **Keep backups** of your cluster data before changing Raft storage settings.
+
+## Summary
+
+FastLog gives Dkron Pro operators a faster Raft storage backend with configurable durability. Enable it with `--fast`, tune it with `--raft-duration`, and plan migrations carefully because the underlying storage format is different from BoltDB.

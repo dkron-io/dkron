@@ -232,7 +232,36 @@ func (a *Agent) establishLeadership(stopCh chan struct{}) error {
 	if err != nil {
 		return err
 	}
+
+	activeExecutions, err := a.GetActiveExecutions()
+	if err != nil {
+		a.logger.WithError(err).Warn("leader: Failed to query active executions during startup reconciliation")
+	} else if err := a.reconcileRunningExecutionOrphans(ctx, jobs, activeExecutionKeys(activeExecutions)); err != nil {
+		a.logger.WithError(err).Warn("leader: Failed to reconcile running execution orphans")
+	}
+
 	return a.sched.Start(jobs, a)
+}
+
+func (a *Agent) reconcileRunningExecutionOrphans(ctx context.Context, jobs []*Job, activeExecutionKeys map[string]struct{}) error {
+	for _, job := range jobs {
+		runningExecs, err := a.cleanupStaleRunningExecutions(ctx, job.Name, activeExecutionKeys, a.logger, "leader: Cleaning up stale execution from storage during startup reconciliation")
+		if err != nil {
+			return err
+		}
+
+		for _, exec := range runningExecs {
+			a.logger.WithFields(map[string]interface{}{
+				"job":         job.Name,
+				"execution":   exec.Key(),
+				"node":        exec.NodeName,
+				"started_at":  exec.StartedAt,
+				"running_for": time.Since(exec.StartedAt).String(),
+			}).Info("leader: Leaving running execution in storage during startup reconciliation")
+		}
+	}
+
+	return nil
 }
 
 // revokeLeadership is invoked once we step down as leader.

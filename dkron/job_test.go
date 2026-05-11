@@ -126,6 +126,7 @@ func Test_isRunnable(t *testing.T) {
 	c.Server = true
 	c.LogLevel = logLevel
 	c.DevMode = true
+	c.HTTPAddr = "127.0.0.1:0"
 
 	a := NewAgent(c)
 	a.GRPCClient = &gRPCClientMock{}

@@ -30,22 +30,22 @@ You must have an active subscription to run Dkron Pro. After a one week grace pe
 
 This is a common requirement for "on-site installs" or "appliances" sold to large corporations.
 
-The standard license is only appropriate for SaaS usage as it does not allow distribution. Dkron Pro have an Appliance license option which **does** allow you to distribute them. The Appliance license is $7,500/yr for Pro. It allows you to distribute the Pro binaries as part of your application and each of your customers to run Dkron Pro **as part of your application only**. Email [support&#64;distrib.works](mailto:support&#64;distrib.works) to purchase.
+The standard license is only appropriate for SaaS usage as it does not allow distribution. Dkron Pro have an Appliance license option which **does** allow you to distribute them. The Appliance license is $7,500/yr for Pro. It allows you to distribute the Pro binaries as part of your application and each of your customers to run Dkron Pro **as part of your application only**. Email [support&#64;dkron.io](mailto:support@dkron.io) to purchase.
 
 ### Can you transfer a license?
 
-Licenses are **not** transferrable to another company.  We will transfer the license from a user-specific email to a group email address (e.g. john_smith@example.com -> tech@example.com) but only for **the same domain**.  It is strongly recommended that you buy the license using a group email address so the license is not attached to any one employee's email address.
+Licenses are **not** transferrable to another company. We will transfer the license from a user-specific email to a group email address (e.g. john_smith@example.com -> tech@example.com) but only for **the same domain**. It is strongly recommended that you buy the license using a group email address so the license is not attached to any one employee's email address.
 
 ### What does the license require me to do?
 
-Your purchase gets you unique access credentials for downloading the Pro packages. The license agreement requires you to keep these access credentials private.  If we find your access credentials are ever publicized:
+Your purchase gets you unique access credentials for downloading the Pro packages. The license agreement requires you to keep these access credentials private. If we find your access credentials are ever publicized:
 
-1. We'll send you a warning email with details.  You need to remove the content and send a new email address so we can generate new credentials for you.  The old credentials will stop working immediately so you'll need to update your apps.
+1. We'll send you a warning email with details. You need to remove the content and send a new email address so we can generate new credentials for you. The old credentials will stop working immediately so you'll need to update your apps.
 2. If your credentials are publicized a second time, we reserve the right to permanently remove access (but won't unless it's really egregious - sloppy contractors happen).
 
 ### Can I get a refund?
 
-Yes, up to two weeks after purchase. Let us know the reason and maybe we can help but either way it's not a problem. Email [support&#64;distrib.works](mailto:support&#64;distrib.works).
+Yes, up to two weeks after purchase. Let us know the reason and maybe we can help but either way it's not a problem. Email [support&#64;dkron.io](mailto:support@dkron.io).
 
 ### How do I update my credit card info?
 

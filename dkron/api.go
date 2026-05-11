@@ -8,12 +8,14 @@ import (
 	"sort"
 	"strconv"
 	"strings"
+	"sync"
 
 	typesv1 "github.com/distribworks/dkron/v4/gen/proto/types/v1"
 	"github.com/gin-contrib/cors"
 	"github.com/gin-contrib/expvar"
 	"github.com/gin-gonic/gin"
 	"github.com/hashicorp/go-uuid"
+	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/sirupsen/logrus"
 	"github.com/tidwall/buntdb"
@@ -24,6 +26,11 @@ import (
 const (
 	pretty        = "pretty"
 	apiPathPrefix = "v1"
+)
+
+var (
+	promHandler     http.Handler
+	promHandlerOnce sync.Once
 )
 
 // Transport is the interface that wraps the ServeHTTP method.
@@ -124,7 +131,7 @@ func (h *HTTPTransport) APIRoutes(r *gin.RouterGroup, middleware ...gin.HandlerF
 
 	if h.agent.config.EnablePrometheus {
 		// Prometheus metrics scrape endpoint
-		r.GET("/metrics", gin.WrapH(promhttp.Handler()))
+		r.GET("/metrics", gin.WrapH(h.prometheusHandler()))
 	}
 
 	r.GET("/v1", h.indexHandler)
@@ -170,6 +177,17 @@ func (h *HTTPTransport) MetaMiddleware() gin.HandlerFunc {
 		c.Header("X-Whom", h.agent.config.NodeName)
 		c.Next()
 	}
+}
+
+func (h *HTTPTransport) prometheusHandler() http.Handler {
+	promHandlerOnce.Do(func() {
+		promHandler = promhttp.HandlerFor(prometheus.DefaultGatherer, promhttp.HandlerOpts{
+			ErrorHandling:      promhttp.ContinueOnError,
+			DisableCompression: true,
+		})
+	})
+
+	return promHandler
 }
 
 func renderJSON(c *gin.Context, status int, v interface{}) {
