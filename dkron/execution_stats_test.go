@@ -153,7 +153,7 @@ func TestSetExecutionDoneUpdatesStats(t *testing.T) {
 	exec2 := &Execution{
 		JobName:    testJob.Name,
 		Group:      now.UnixNano() + 1,
-		StartedAt:  now,
+		StartedAt:  now.Add(time.Second),
 		FinishedAt: now.Add(time.Second),
 		NodeName:   "test-node",
 		Success:    false,
@@ -169,4 +169,54 @@ func TestSetExecutionDoneUpdatesStats(t *testing.T) {
 	require.Len(t, stats.Stats, 1)
 	assert.Equal(t, 1, stats.Stats[0].SuccessCount)
 	assert.Equal(t, 1, stats.Stats[0].FailedCount)
+}
+
+func TestSetExecutionDoneIgnoresDuplicateStats(t *testing.T) {
+	logger := logrus.NewEntry(logrus.New())
+	tracer := noop.NewTracerProvider().Tracer("test")
+
+	store, err := NewStore(logger, tracer)
+	require.NoError(t, err)
+	defer store.Shutdown()
+
+	ctx := context.Background()
+	testJob := &Job{
+		Name:           "stats-duplicate-job",
+		Schedule:       "@manually",
+		Executor:       "shell",
+		ExecutorConfig: map[string]string{"command": "/bin/true"},
+	}
+
+	err = store.SetJob(ctx, testJob, true)
+	require.NoError(t, err)
+
+	now := time.Now()
+	exec := &Execution{
+		JobName:    testJob.Name,
+		Group:      now.UnixNano(),
+		StartedAt:  now,
+		FinishedAt: now.Add(time.Second),
+		NodeName:   "test-node",
+		Success:    true,
+		Output:     "success output",
+	}
+
+	updated, err := store.SetExecutionDone(ctx, exec)
+	require.NoError(t, err)
+	assert.True(t, updated)
+
+	updated, err = store.SetExecutionDone(ctx, exec)
+	require.NoError(t, err)
+	assert.False(t, updated)
+
+	job, err := store.GetJob(ctx, testJob.Name, nil)
+	require.NoError(t, err)
+	assert.Equal(t, 1, job.SuccessCount)
+	assert.Equal(t, 0, job.ErrorCount)
+
+	stats, err := store.GetExecutionStats(ctx, 1)
+	require.NoError(t, err)
+	require.Len(t, stats.Stats, 1)
+	assert.Equal(t, 1, stats.Stats[0].SuccessCount)
+	assert.Equal(t, 0, stats.Stats[0].FailedCount)
 }

@@ -33,14 +33,14 @@ teardown() {
     local _create_status
     _create_status=$(get_status_code "$_create_response")
     [ "$_create_status" = "201" ] || [ "$_create_status" = "200" ]
-    
+
     # Wait for job to be persisted and added to scheduler
     sleep 2
-    
+
     # Trigger manual execution via the bare endpoint
     response=$(api_post "/v1/jobs/${TEST_JOB_NAME}" "")
     status=$(get_status_code "$response")
-    
+
     # API returns 200 when job is run
     [ "$status" = "200" ]
 }
@@ -49,14 +49,14 @@ teardown() {
     # Create ENABLED job (disabled jobs cannot be run manually)
     local _create_response
     _create_response=$(create_shell_job "$TEST_JOB_NAME" "@every 1h" "echo e2e-test-output" "false")
-    
+
     # Wait for job to be added to scheduler
     sleep 2
-    
+
     # Trigger manual execution via alternate endpoint
     response=$(api_post "/v1/jobs/${TEST_JOB_NAME}/run" "")
     status=$(get_status_code "$response")
-    
+
     # API returns 200 when job is run
     [ "$status" = "200" ]
 }
@@ -64,7 +64,7 @@ teardown() {
 @test "POST /v1/jobs/:job returns 404 for non-existent job" {
     response=$(api_post "/v1/jobs/non-existent-job-12345" "")
     status=$(get_status_code "$response")
-    
+
     [ "$status" = "404" ]
 }
 
@@ -75,20 +75,20 @@ teardown() {
 @test "GET /v1/jobs/:job/executions returns 200" {
     # Create job
     create_shell_job "$TEST_JOB_NAME" "@every 1h" "echo hello" "true"
-    
+
     response=$(api_get "/v1/jobs/${TEST_JOB_NAME}/executions")
     status=$(get_status_code "$response")
-    
+
     [ "$status" = "200" ]
 }
 
 @test "GET /v1/jobs/:job/executions returns array" {
     # Create job
     create_shell_job "$TEST_JOB_NAME" "@every 1h" "echo hello" "true"
-    
+
     response=$(api_get "/v1/jobs/${TEST_JOB_NAME}/executions")
     body=$(get_response_body "$response")
-    
+
     is_array=$(echo "$body" | jq 'type == "array"' 2>/dev/null)
     [ "$is_array" = "true" ]
 }
@@ -96,7 +96,7 @@ teardown() {
 @test "GET /v1/jobs/:job/executions returns 404 for non-existent job" {
     response=$(api_get "/v1/jobs/non-existent-job-12345/executions")
     status=$(get_status_code "$response")
-    
+
     [ "$status" = "404" ]
 }
 
@@ -108,20 +108,20 @@ teardown() {
     # Create ENABLED job (disabled jobs cannot be run manually)
     local _cr
     _cr=$(create_shell_job "$TEST_JOB_NAME" "@every 1h" "echo success-test" "false")
-    
+
     # Wait for job to be added to scheduler
     sleep 2
-    
+
     # Trigger manual execution using /run endpoint
     api_post "/v1/jobs/${TEST_JOB_NAME}/run" ""
-    
+
     # Wait for execution to complete
     wait_for_execution "$TEST_JOB_NAME" 30
-    
+
     # Check executions
     response=$(api_get "/v1/jobs/${TEST_JOB_NAME}/executions")
     body=$(get_response_body "$response")
-    
+
     # Should have at least one execution
     count=$(json_array_length "$body")
     [ "$count" -ge 1 ]
@@ -131,20 +131,20 @@ teardown() {
     # Create ENABLED job
     local _cr
     _cr=$(create_shell_job "$TEST_JOB_NAME" "@every 1h" "echo success" "false")
-    
+
     # Wait for job to be added to scheduler
     sleep 2
-    
+
     # Trigger execution using /run endpoint
     api_post "/v1/jobs/${TEST_JOB_NAME}/run" ""
-    
+
     # Wait for successful execution
     wait_for_successful_executions "$TEST_JOB_NAME" 1 30
-    
+
     # Verify success
     response=$(api_get "/v1/jobs/${TEST_JOB_NAME}/executions")
     body=$(get_response_body "$response")
-    
+
     success_count=$(echo "$body" | jq '[.[] | select(.success == true)] | length' 2>/dev/null)
     [ "$success_count" -ge 1 ]
 }
@@ -153,24 +153,24 @@ teardown() {
     # Create ENABLED job that will fail
     local _cr
     _cr=$(create_shell_job "$TEST_JOB_NAME" "@every 1h" "exit 1" "false")
-    
+
     # Wait for job to be added to scheduler
     sleep 2
-    
+
     # Trigger execution using /run endpoint
     api_post "/v1/jobs/${TEST_JOB_NAME}/run" ""
-    
+
     # Wait for execution to complete
     wait_for_execution "$TEST_JOB_NAME" 30
-    
+
     # Check executions
     response=$(api_get "/v1/jobs/${TEST_JOB_NAME}/executions")
     body=$(get_response_body "$response")
-    
+
     # Should have at least one execution
     count=$(json_array_length "$body")
     [ "$count" -ge 1 ]
-    
+
     # Verify the execution has success=false
     failure_count=$(echo "$body" | jq '[.[] | select(.success == false)] | length' 2>/dev/null)
     [ "$failure_count" -ge 1 ]
@@ -178,27 +178,27 @@ teardown() {
 
 @test "Job execution captures output" {
     local test_output="e2e-unique-output-$(date +%s)"
-    
+
     # Create ENABLED job with unique output
     local _cr
     _cr=$(create_shell_job "$TEST_JOB_NAME" "@every 1h" "echo ${test_output}" "false")
-    
+
     # Wait for job to be added to scheduler
     sleep 2
-    
+
     # Trigger execution using /run endpoint
     api_post "/v1/jobs/${TEST_JOB_NAME}/run" ""
-    
+
     # Wait for execution
     wait_for_execution "$TEST_JOB_NAME" 30
-    
+
     # Check output in execution
     response=$(api_get "/v1/jobs/${TEST_JOB_NAME}/executions")
     body=$(get_response_body "$response")
-    
+
     # Get first execution's output
     output=$(echo "$body" | jq -r '.[0].output // ""' 2>/dev/null)
-    
+
     # Output should contain our test string
     [[ "$output" == *"$test_output"* ]] || [[ "$output" == *"e2e"* ]]
 }
@@ -207,20 +207,20 @@ teardown() {
     # Create ENABLED job
     local _cr
     _cr=$(create_shell_job "$TEST_JOB_NAME" "@every 1h" "echo hello" "false")
-    
+
     # Wait for job to be added to scheduler
     sleep 2
-    
+
     # Trigger execution using /run endpoint
     api_post "/v1/jobs/${TEST_JOB_NAME}/run" ""
-    
+
     # Wait for execution
     wait_for_execution "$TEST_JOB_NAME" 30
-    
+
     # Check started_at
     response=$(api_get "/v1/jobs/${TEST_JOB_NAME}/executions")
     body=$(get_response_body "$response")
-    
+
     started_at=$(echo "$body" | jq -r '.[0].started_at // ""' 2>/dev/null)
     [ -n "$started_at" ]
     [ "$started_at" != "null" ]
@@ -230,20 +230,20 @@ teardown() {
     # Create ENABLED job
     local _cr
     _cr=$(create_shell_job "$TEST_JOB_NAME" "@every 1h" "echo hello" "false")
-    
+
     # Wait for job to be added to scheduler
     sleep 2
-    
+
     # Trigger execution using /run endpoint
     api_post "/v1/jobs/${TEST_JOB_NAME}/run" ""
-    
+
     # Wait for execution
     wait_for_execution "$TEST_JOB_NAME" 30
-    
+
     # Check finished_at
     response=$(api_get "/v1/jobs/${TEST_JOB_NAME}/executions")
     body=$(get_response_body "$response")
-    
+
     finished_at=$(echo "$body" | jq -r '.[0].finished_at // ""' 2>/dev/null)
     [ -n "$finished_at" ]
     [ "$finished_at" != "null" ]
@@ -254,20 +254,20 @@ teardown() {
     # Create ENABLED job
     local _cr
     _cr=$(create_shell_job "$TEST_JOB_NAME" "@every 1h" "echo hello" "false")
-    
+
     # Wait for job to be added to scheduler
     sleep 2
-    
+
     # Trigger execution using /run endpoint
     api_post "/v1/jobs/${TEST_JOB_NAME}/run" ""
-    
+
     # Wait for execution
     wait_for_execution "$TEST_JOB_NAME" 30
-    
+
     # Check node_name
     response=$(api_get "/v1/jobs/${TEST_JOB_NAME}/executions")
     body=$(get_response_body "$response")
-    
+
     node_name=$(echo "$body" | jq -r '.[0].node_name // ""' 2>/dev/null)
     [ -n "$node_name" ]
     [ "$node_name" != "null" ]
@@ -281,30 +281,30 @@ teardown() {
     # Create ENABLED job and run it using /run endpoint
     local _cr
     _cr=$(create_shell_job "$TEST_JOB_NAME" "@every 1h" "echo hello" "false")
-    
+
     # Wait for job to be added to scheduler
     sleep 2
-    
+
     api_post "/v1/jobs/${TEST_JOB_NAME}/run" ""
     wait_for_execution "$TEST_JOB_NAME" 30
-    
+
     # Verify executions exist
     response=$(api_get "/v1/jobs/${TEST_JOB_NAME}/executions")
     body=$(get_response_body "$response")
     count=$(json_array_length "$body")
     [ "$count" -ge 1 ]
-    
+
     # Delete executions
     response=$(api_delete "/v1/jobs/${TEST_JOB_NAME}/executions")
     status=$(get_status_code "$response")
-    
+
     [ "$status" = "200" ]
-    
+
     # Verify executions are deleted
     response=$(api_get "/v1/jobs/${TEST_JOB_NAME}/executions")
     body=$(get_response_body "$response")
     count=$(json_array_length "$body")
-    
+
     [ "$count" = "0" ]
 }
 
@@ -316,22 +316,22 @@ teardown() {
     # Create ENABLED job (disabled jobs cannot be run manually)
     local _cr
     _cr=$(create_shell_job "$TEST_JOB_NAME" "@every 1h" "echo run" "false")
-    
+
     # Wait for job to be added to scheduler
     sleep 2
-    
+
     # Run multiple times using /run endpoint
     api_post "/v1/jobs/${TEST_JOB_NAME}/run" ""
     wait_for_execution "$TEST_JOB_NAME" 30
-    
+
     api_post "/v1/jobs/${TEST_JOB_NAME}/run" ""
     wait_for_execution "$TEST_JOB_NAME" 30
-    
+
     # Check executions count
     response=$(api_get "/v1/jobs/${TEST_JOB_NAME}/executions")
     body=$(get_response_body "$response")
     count=$(json_array_length "$body")
-    
+
     [ "$count" -ge 2 ]
 }
 
@@ -350,33 +350,33 @@ teardown() {
             "command": "echo scheduled-run"
         }
     }'
-    
+
     response=$(api_post "/v1/jobs" "$job_json")
     status=$(get_status_code "$response")
     [ "$status" = "201" ]
-    
+
     # Wait for at least one execution
     wait_for_successful_executions "$TEST_JOB_NAME" 1 30
-    
+
     # Verify execution happened
     response=$(api_get "/v1/jobs/${TEST_JOB_NAME}/executions")
     body=$(get_response_body "$response")
     count=$(json_array_length "$body")
-    
+
     [ "$count" -ge 1 ]
 }
 
 @test "Disabled job does not run automatically" {
     # Create a disabled job
     create_shell_job "$TEST_JOB_NAME" "@every 2s" "echo should-not-run" "true"
-    
+
     # Wait a bit
     sleep 5
-    
+
     # Check that no executions happened
     response=$(api_get "/v1/jobs/${TEST_JOB_NAME}/executions")
     body=$(get_response_body "$response")
     count=$(json_array_length "$body")
-    
+
     [ "$count" = "0" ]
 }

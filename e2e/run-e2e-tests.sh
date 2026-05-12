@@ -88,27 +88,27 @@ EOF
 
 check_dependencies() {
     local missing=()
-    
+
     if ! command -v docker &> /dev/null; then
         missing+=("docker")
     fi
-    
+
     if ! command -v docker-compose &> /dev/null && ! docker compose version &> /dev/null; then
         missing+=("docker-compose or docker compose plugin")
     fi
-    
+
     if ! command -v bats &> /dev/null; then
         missing+=("bats")
     fi
-    
+
     if ! command -v jq &> /dev/null; then
         missing+=("jq")
     fi
-    
+
     if ! command -v curl &> /dev/null; then
         missing+=("curl")
     fi
-    
+
     if [ ${#missing[@]} -gt 0 ]; then
         log_error "Missing required dependencies: ${missing[*]}"
         log_info "Please install the missing dependencies and try again."
@@ -119,7 +119,7 @@ check_dependencies() {
         log_info "  - curl: apt-get install curl (or your package manager)"
         exit 1
     fi
-    
+
     log_success "All dependencies found"
 }
 
@@ -133,30 +133,30 @@ docker_compose_cmd() {
 
 start_cluster() {
     log_info "Starting Dkron cluster..."
-    
+
     if [ "$BUILD" = true ]; then
         log_info "Building Docker images..."
         docker_compose_cmd build --quiet
     fi
-    
+
     docker_compose_cmd up -d
-    
+
     log_info "Waiting for cluster to be ready (timeout: ${STARTUP_TIMEOUT}s)..."
-    
+
     local elapsed=0
     local interval=5
-    
+
     while [ $elapsed -lt "$STARTUP_TIMEOUT" ]; do
         if curl -s -o /dev/null -w "%{http_code}" "${DKRON_API_URL}/health" 2>/dev/null | grep -q "200"; then
             log_success "Cluster is ready!"
             return 0
         fi
-        
+
         sleep $interval
         elapsed=$((elapsed + interval))
         echo -n "."
     done
-    
+
     echo ""
     log_error "Timeout waiting for cluster to be ready"
     log_info "Checking container logs..."
@@ -170,7 +170,7 @@ stop_cluster() {
         log_info "To stop: docker compose -f $COMPOSE_FILE -p $COMPOSE_PROJECT down"
         return 0
     fi
-    
+
     log_info "Stopping cluster..."
     docker_compose_cmd down -v --remove-orphans
     log_success "Cluster stopped"
@@ -179,15 +179,15 @@ stop_cluster() {
 run_tests() {
     log_info "Running E2E tests..."
     echo ""
-    
+
     local test_files=()
-    
+
     if [ -n "$FILTER" ]; then
         # Find test files matching the filter
         while IFS= read -r -d '' file; do
             test_files+=("$file")
         done < <(find "${SCRIPT_DIR}/tests" -name "*${FILTER}*.bats" -print0 | sort -z)
-        
+
         if [ ${#test_files[@]} -eq 0 ]; then
             log_error "No test files found matching filter: $FILTER"
             return 1
@@ -198,25 +198,25 @@ run_tests() {
             test_files+=("$file")
         done < <(find "${SCRIPT_DIR}/tests" -name "*.bats" -print0 | sort -z)
     fi
-    
+
     log_info "Found ${#test_files[@]} test file(s) to run"
     echo ""
-    
+
     local exit_code=0
     local bats_opts=()
-    
+
     if [ "$VERBOSE" = true ]; then
         bats_opts+=("--verbose-run")
     fi
-    
+
     # Export environment variables for tests
     export DKRON_API_URL
-    
+
     # Run bats tests
     if ! bats "${bats_opts[@]}" "${test_files[@]}"; then
         exit_code=1
     fi
-    
+
     return $exit_code
 }
 
@@ -262,49 +262,49 @@ main() {
                 ;;
         esac
     done
-    
+
     echo ""
     echo "========================================"
     echo "       Dkron E2E Test Runner"
     echo "========================================"
     echo ""
-    
+
     # Set up error handling
     trap cleanup_on_error ERR
-    
+
     # Check dependencies
     check_dependencies
-    
+
     # Start cluster
     if ! start_cluster; then
         log_error "Failed to start cluster"
         stop_cluster
         exit 1
     fi
-    
+
     # Show cluster status
     log_info "Cluster status:"
     docker_compose_cmd ps
     echo ""
-    
+
     # Run tests
     local test_result=0
     if ! run_tests; then
         test_result=1
     fi
-    
+
     echo ""
-    
+
     # Stop cluster
     stop_cluster
-    
+
     echo ""
     if [ $test_result -eq 0 ]; then
         log_success "All E2E tests passed!"
     else
         log_error "Some E2E tests failed"
     fi
-    
+
     exit $test_result
 }
 

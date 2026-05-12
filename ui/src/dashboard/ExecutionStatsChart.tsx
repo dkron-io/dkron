@@ -46,7 +46,7 @@ const ExecutionStatsChart = () => {
                 setLoading(true);
                 const response = await httpClient(`${apiUrl}/stats?days=30`);
                 const statsResponse: ExecutionStatsResponse = response.json;
-                
+
                 const chartData: ChartDataPoint[] = statsResponse.stats.map((stat) => ({
                     date: stat.date,
                     dateFormatted: dateFormatter(stat.date),
@@ -54,7 +54,7 @@ const ExecutionStatsChart = () => {
                     failed: stat.failed_count,
                     total: stat.success_count + stat.failed_count,
                 }));
-                
+
                 setData(chartData);
                 setError(null);
             } catch (err) {
@@ -99,8 +99,8 @@ const ExecutionStatsChart = () => {
 
     return (
         <Card>
-            <CardHeader 
-                title="Execution Statistics (Last 30 Days)" 
+            <CardHeader
+                title="Execution Statistics (Last 30 Days)"
                 subheader={`Total: ${totalSuccess + totalFailed} executions (${totalSuccess} successful, ${totalFailed} failed)`}
             />
             <CardContent>
@@ -118,16 +118,16 @@ const ExecutionStatsChart = () => {
                                 </linearGradient>
                             </defs>
                             <CartesianGrid strokeDasharray="3 3" />
-                            <XAxis 
-                                dataKey="dateFormatted" 
+                            <XAxis
+                                dataKey="dateFormatted"
                                 tick={{ fontSize: 12 }}
                                 interval="preserveStartEnd"
                             />
-                            <YAxis 
+                            <YAxis
                                 allowDecimals={false}
                                 tick={{ fontSize: 12 }}
                             />
-                            <Tooltip 
+                            <Tooltip
                                 labelFormatter={(label) => {
                                     if (typeof label === 'string') {
                                         // Parse date from formatted string, but use actual date from first data point
@@ -140,7 +140,7 @@ const ExecutionStatsChart = () => {
                                     return [value, displayName];
                                 }}
                             />
-                            <Legend 
+                            <Legend
                                 formatter={(value) => value === 'success' ? 'Successful' : 'Failed'}
                             />
                             <Area

@@ -21,7 +21,7 @@ NC='\033[0m' # No Color
 api_get() {
     local endpoint="$1"
     local url="${DKRON_API_URL}${endpoint}"
-    
+
     curl -s -w "\n%{http_code}" \
         -H "Accept: application/json" \
         --max-time "$DKRON_API_TIMEOUT" \
@@ -34,7 +34,7 @@ api_post() {
     local endpoint="$1"
     local data="$2"
     local url="${DKRON_API_URL}${endpoint}"
-    
+
     curl -s -w "\n%{http_code}" \
         -H "Accept: application/json" \
         -H "Content-Type: application/json" \
@@ -50,7 +50,7 @@ api_put() {
     local endpoint="$1"
     local data="$2"
     local url="${DKRON_API_URL}${endpoint}"
-    
+
     curl -s -w "\n%{http_code}" \
         -H "Accept: application/json" \
         -H "Content-Type: application/json" \
@@ -65,7 +65,7 @@ api_put() {
 api_delete() {
     local endpoint="$1"
     local url="${DKRON_API_URL}${endpoint}"
-    
+
     curl -s -w "\n%{http_code}" \
         -H "Accept: application/json" \
         --max-time "$DKRON_API_TIMEOUT" \
@@ -79,7 +79,7 @@ api_patch() {
     local endpoint="$1"
     local data="$2"
     local url="${DKRON_API_URL}${endpoint}"
-    
+
     curl -s -w "\n%{http_code}" \
         -H "Accept: application/json" \
         -H "Content-Type: application/json" \
@@ -142,7 +142,7 @@ wait_for() {
     local check_fn="$4"
     shift 4
     local args=("$@")
-    
+
     local elapsed=0
     while [ $elapsed -lt $timeout ]; do
         if "$check_fn" "${args[@]}" 2>/dev/null; then
@@ -151,7 +151,7 @@ wait_for() {
         sleep "$interval"
         elapsed=$((elapsed + interval))
     done
-    
+
     echo "Timeout waiting for: $description" >&2
     return 1
 }
@@ -162,21 +162,21 @@ wait_for_api() {
     local timeout="${1:-30}"
     local interval=1
     local elapsed=0
-    
+
     while [ $elapsed -lt $timeout ]; do
         local response
         response=$(api_get "/health" 2>/dev/null)
         local status
         status=$(get_status_code "$response")
-        
+
         if [ "$status" = "200" ]; then
             return 0
         fi
-        
+
         sleep "$interval"
         elapsed=$((elapsed + interval))
     done
-    
+
     echo "Timeout waiting for Dkron API to be ready" >&2
     return 1
 }
@@ -188,7 +188,7 @@ wait_for_cluster_members() {
     local timeout="${2:-30}"
     local interval=2
     local elapsed=0
-    
+
     while [ $elapsed -lt $timeout ]; do
         local response
         response=$(api_get "/v1/members" 2>/dev/null)
@@ -196,15 +196,15 @@ wait_for_cluster_members() {
         body=$(get_response_body "$response")
         local count
         count=$(json_array_length "$body" 2>/dev/null || echo "0")
-        
+
         if [ "$count" -ge "$expected_count" ]; then
             return 0
         fi
-        
+
         sleep "$interval"
         elapsed=$((elapsed + interval))
     done
-    
+
     echo "Timeout waiting for $expected_count cluster members" >&2
     return 1
 }
@@ -216,25 +216,25 @@ wait_for_execution() {
     local timeout="${2:-60}"
     local interval=2
     local elapsed=0
-    
+
     while [ $elapsed -lt $timeout ]; do
         local response
         response=$(api_get "/v1/jobs/${job_name}/executions" 2>/dev/null)
         local body
         body=$(get_response_body "$response")
-        
+
         # Check if there's at least one finished execution
         local has_finished
         has_finished=$(echo "$body" | jq '[.[] | select(.finished_at != null and .finished_at != "")] | length > 0' 2>/dev/null || echo "false")
-        
+
         if [ "$has_finished" = "true" ]; then
             return 0
         fi
-        
+
         sleep "$interval"
         elapsed=$((elapsed + interval))
     done
-    
+
     echo "Timeout waiting for job execution to complete" >&2
     return 1
 }
@@ -247,24 +247,24 @@ wait_for_successful_executions() {
     local timeout="${3:-60}"
     local interval=2
     local elapsed=0
-    
+
     while [ $elapsed -lt $timeout ]; do
         local response
         response=$(api_get "/v1/jobs/${job_name}/executions" 2>/dev/null)
         local body
         body=$(get_response_body "$response")
-        
+
         local success_count
         success_count=$(echo "$body" | jq '[.[] | select(.success == true)] | length' 2>/dev/null || echo "0")
-        
+
         if [ "$success_count" -ge "$expected_count" ]; then
             return 0
         fi
-        
+
         sleep "$interval"
         elapsed=$((elapsed + interval))
     done
-    
+
     echo "Timeout waiting for $expected_count successful executions" >&2
     return 1
 }
@@ -280,7 +280,7 @@ create_shell_job() {
     local schedule="$2"
     local command="$3"
     local disabled="${4:-false}"
-    
+
     local job_json
     job_json=$(cat <<EOF
 {
@@ -294,7 +294,7 @@ create_shell_job() {
 }
 EOF
 )
-    
+
     api_post "/v1/jobs" "$job_json"
 }
 
@@ -303,7 +303,7 @@ EOF
 create_failing_job() {
     local name="$1"
     local schedule="$2"
-    
+
     create_shell_job "$name" "$schedule" "exit 1"
 }
 
@@ -314,7 +314,7 @@ create_tagged_job() {
     local schedule="$2"
     local command="$3"
     local tags="$4"
-    
+
     local job_json
     job_json=$(cat <<EOF
 {
@@ -330,7 +330,7 @@ create_tagged_job() {
 }
 EOF
 )
-    
+
     api_post "/v1/jobs" "$job_json"
 }
 
@@ -379,10 +379,10 @@ cleanup_test_jobs() {
     response=$(api_get "/v1/jobs")
     local body
     body=$(get_response_body "$response")
-    
+
     local job_names
     job_names=$(echo "$body" | jq -r '.[] | select(.name | test("^(test-|e2e-)")) | .name' 2>/dev/null || echo "")
-    
+
     for job_name in $job_names; do
         delete_job "$job_name"
     done
@@ -399,7 +399,7 @@ assert_status() {
     local response="$2"
     local actual
     actual=$(get_status_code "$response")
-    
+
     if [ "$actual" != "$expected" ]; then
         echo "Expected status $expected, got $actual" >&2
         echo "Response: $(get_response_body "$response")" >&2
@@ -415,7 +415,7 @@ assert_json_value() {
     local json="$3"
     local actual
     actual=$(json_get "$json" "$field")
-    
+
     if [ "$actual" != "$expected" ]; then
         echo "Expected $field to be '$expected', got '$actual'" >&2
         return 1
@@ -429,7 +429,7 @@ assert_json_exists() {
     local json="$2"
     local value
     value=$(json_get "$json" "$field")
-    
+
     if [ -z "$value" ] || [ "$value" = "null" ]; then
         echo "Expected $field to exist and not be null" >&2
         return 1
@@ -443,7 +443,7 @@ assert_array_length() {
     local json="$2"
     local actual
     actual=$(json_array_length "$json")
-    
+
     if [ "$actual" != "$expected" ]; then
         echo "Expected array length $expected, got $actual" >&2
         return 1
@@ -457,7 +457,7 @@ assert_array_min_length() {
     local json="$2"
     local actual
     actual=$(json_array_length "$json")
-    
+
     if [ "$actual" -lt "$min" ]; then
         echo "Expected array length at least $min, got $actual" >&2
         return 1

@@ -54,9 +54,9 @@ const CustomUserMenu = (props: any) => (
 const CustomAppBar = (props: any) => {
 
     return (
-        <StyledAppBar 
-            {...props} 
-            elevation={0} 
+        <StyledAppBar
+            {...props}
+            elevation={0}
             userMenu={<CustomUserMenu />}
             sx={{
                 borderBottom: '1px solid',
@@ -76,10 +76,10 @@ const CustomAppBar = (props: any) => {
                 sx={{ ml: 2 }}
             />
             <span className={classes.spacer} />
-            <Box 
-                sx={{ 
-                    display: 'flex', 
-                    alignItems: 'center', 
+            <Box
+                sx={{
+                    display: 'flex',
+                    alignItems: 'center',
                     gap: 2,
                     mr: 1,
                 }}

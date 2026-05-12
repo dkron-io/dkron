@@ -124,7 +124,7 @@ const DiagramNode: React.FC<DiagramNodeProps> = ({ node, onClick }) => {
           filter: node.isCurrent ? 'drop-shadow(0 4px 6px rgba(26, 54, 93, 0.3))' : 'drop-shadow(0 1px 3px rgba(0, 0, 0, 0.1))',
         }}
       />
-      
+
       {/* Status indicator line */}
       <rect
         x={0}
@@ -134,7 +134,7 @@ const DiagramNode: React.FC<DiagramNodeProps> = ({ node, onClick }) => {
         rx={8}
         fill={statusColor}
       />
-      
+
       {/* Job name */}
       <text
         x={NODE_WIDTH / 2}
@@ -147,7 +147,7 @@ const DiagramNode: React.FC<DiagramNodeProps> = ({ node, onClick }) => {
         <title>{displayName}</title>
         {truncatedName}
       </text>
-      
+
       {/* Status text */}
       <text
         x={NODE_WIDTH / 2}
@@ -158,7 +158,7 @@ const DiagramNode: React.FC<DiagramNodeProps> = ({ node, onClick }) => {
       >
         {node.status || 'untriggered'}
       </text>
-      
+
       {/* Current job indicator */}
       {node.isCurrent && (
         <text
@@ -181,10 +181,10 @@ const DiagramEdge: React.FC<{ edge: DependencyEdge }> = ({ edge }) => {
   const startY = edge.fromY + NODE_HEIGHT;
   const endX = edge.toX + NODE_WIDTH / 2;
   const endY = edge.toY;
-  
+
   // Calculate control points for smooth curve
   const midY = (startY + endY) / 2;
-  
+
   return (
     <g>
       <path
@@ -208,14 +208,14 @@ const buildDependencyGraph = (
   const processedAncestors = new Set<string>();
   const processedDescendants = new Set<string>();
   const jobLevels = new Map<string, number>();
-  
+
   // Find all ancestors (jobs this job depends on)
   const findAncestors = (jobName: string, level: number): string[] => {
     if (processedAncestors.has(jobName)) return [];
     processedAncestors.add(jobName);
     const job = jobMap.get(jobName);
     if (!job) return [];
-    
+
     const ancestors: string[] = [];
     if (job.parent_job && jobMap.has(job.parent_job)) {
       ancestors.push(job.parent_job);
@@ -224,14 +224,14 @@ const buildDependencyGraph = (
     }
     return ancestors;
   };
-  
+
   // Find all descendants (jobs that depend on this job)
   const findDescendants = (jobName: string, level: number): string[] => {
     if (processedDescendants.has(jobName)) return [];
     processedDescendants.add(jobName);
     const job = jobMap.get(jobName);
     if (!job) return [];
-    
+
     const descendants: string[] = [];
     const children = job.dependent_jobs || [];
     children.forEach((childName) => {
@@ -243,15 +243,15 @@ const buildDependencyGraph = (
     });
     return descendants;
   };
-  
+
   // Start with current job at level 0
   jobLevels.set(currentJob.name, 0);
-  
+
   // Find all related jobs
   const ancestors = findAncestors(currentJob.name, 0);
   const descendants = findDescendants(currentJob.name, 0);
   const relatedJobs = new Set([currentJob.name, ...ancestors, ...descendants]);
-  
+
   // Group jobs by level
   const levelGroups = new Map<number, string[]>();
   relatedJobs.forEach((jobName) => {
@@ -261,31 +261,31 @@ const buildDependencyGraph = (
     }
     levelGroups.get(level)!.push(jobName);
   });
-  
+
   // Sort levels
   const sortedLevels = Array.from(levelGroups.keys()).sort((a, b) => a - b);
   const minLevel = sortedLevels[0] || 0;
-  
+
   // Calculate node positions
   const nodePositions = new Map<string, { x: number; y: number }>();
   let maxWidth = 0;
-  
+
   sortedLevels.forEach((level) => {
     const jobsAtLevel = levelGroups.get(level) || [];
     const levelWidth = jobsAtLevel.length * (NODE_WIDTH + NODE_SPACING) - NODE_SPACING;
     maxWidth = Math.max(maxWidth, levelWidth);
   });
-  
+
   sortedLevels.forEach((level) => {
     const jobsAtLevel = levelGroups.get(level) || [];
     const levelWidth = jobsAtLevel.length * (NODE_WIDTH + NODE_SPACING) - NODE_SPACING;
     const startX = (maxWidth - levelWidth) / 2;
     const y = (level - minLevel) * LEVEL_HEIGHT + 30;
-    
+
     jobsAtLevel.forEach((jobName, index) => {
       const x = startX + index * (NODE_WIDTH + NODE_SPACING);
       nodePositions.set(jobName, { x, y });
-      
+
       const job = jobMap.get(jobName);
       if (job) {
         nodes.push({
@@ -301,7 +301,7 @@ const buildDependencyGraph = (
       }
     });
   });
-  
+
   // Create edges
   relatedJobs.forEach((jobName) => {
     const job = jobMap.get(jobName);
@@ -320,7 +320,7 @@ const buildDependencyGraph = (
       }
     }
   });
-  
+
   return { nodes, edges };
 };
 
@@ -371,7 +371,7 @@ const JobDependencyDiagram: React.FC = () => {
 
   const hasNoDependencies = nodes.length <= 1;
   const hasDependencies = !hasNoDependencies;
-  
+
   // Calculate SVG dimensions
   const svgPadding = 40;
   const maxX = Math.max(...nodes.map((n) => n.x + NODE_WIDTH), 300);
@@ -383,19 +383,19 @@ const JobDependencyDiagram: React.FC = () => {
     <Card sx={{ mb: 3 }}>
       <CardContent>
         <SectionHeader icon={AccountTreeIcon} title="Job Dependencies" />
-        
+
         {loading && (
           <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}>
             <CircularProgress />
           </Box>
         )}
-        
+
         {error && (
           <Box sx={{ py: 4, textAlign: 'center' }}>
             <Typography color="error">{error}</Typography>
           </Box>
         )}
-        
+
         {!loading && !error && hasNoDependencies && (
           <Box sx={{ py: 4, textAlign: 'center' }}>
             <AccountTreeIcon sx={{ fontSize: 48, color: 'text.secondary', mb: 2 }} />
@@ -407,7 +407,7 @@ const JobDependencyDiagram: React.FC = () => {
             </Typography>
           </Box>
         )}
-        
+
         {!loading && !error && hasDependencies && (
           <>
             <Box sx={{ mb: 2, display: 'flex', gap: 1, flexWrap: 'wrap' }}>
@@ -436,7 +436,7 @@ const JobDependencyDiagram: React.FC = () => {
                 sx={{ backgroundColor: '#f1f5f9', color: '#475569' }}
               />
             </Box>
-            
+
             <Box
               sx={{
                 overflowX: 'auto',
@@ -463,13 +463,13 @@ const JobDependencyDiagram: React.FC = () => {
                     <polygon points="0 0, 10 3.5, 0 7" fill="#94a3b8" />
                   </marker>
                 </defs>
-                
+
                 <g transform={`translate(${svgPadding}, 0)`}>
                   {/* Render edges first (behind nodes) */}
                   {edges.map((edge, index) => (
                     <DiagramEdge key={`edge-${index}`} edge={edge} />
                   ))}
-                  
+
                   {/* Render nodes */}
                   {nodes.map((node) => (
                     <DiagramNode
@@ -481,7 +481,7 @@ const JobDependencyDiagram: React.FC = () => {
                 </g>
               </svg>
             </Box>
-            
+
             <Typography
               variant="caption"
               color="text.secondary"

@@ -23,10 +23,10 @@ class Clock extends Component<{}, { date: Date }> {
 
     render() {
         return (
-            <Box 
-                sx={{ 
-                    display: 'flex', 
-                    alignItems: 'center', 
+            <Box
+                sx={{
+                    display: 'flex',
+                    alignItems: 'center',
                     gap: 0.75,
                     backgroundColor: 'rgba(255, 255, 255, 0.1)',
                     borderRadius: 2,
@@ -35,9 +35,9 @@ class Clock extends Component<{}, { date: Date }> {
                 }}
             >
                 <AccessTimeIcon sx={{ fontSize: 16, opacity: 0.9 }} />
-                <Typography 
-                    variant="body2" 
-                    sx={{ 
+                <Typography
+                    variant="body2"
+                    sx={{
                         fontFamily: '"Roboto Mono", monospace',
                         fontWeight: 500,
                         fontSize: '0.8rem',

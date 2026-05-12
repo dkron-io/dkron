@@ -73,6 +73,8 @@ For convenience, Dkron supports several predefined schedules:
 | @hourly                | Run once an hour at the beginning of hour  | 0 0 * * * *      |
 | @minutely              | Run once a minute at the beginning         | 0 * * * * *      |
 | @manually              | Never runs automatically (manual triggers) | N/A              |
+| @at <time>             | Run once at specified time                 | N/A              |
+| @after <time> <grace>  | Run once with grace period for late jobs   | N/A              |
 
 Example: `@daily` is equivalent to `0 0 0 * * *`
 
@@ -101,6 +103,65 @@ To schedule a job to be executed just once at a specific time:
 Where "datetime" is a string in [RFC3339 format](https://golang.org/pkg/time/#Parse).
 
 Example: `@at 2023-12-31T23:59:00Z` will run the job once on December 31, 2023 at 11:59 PM UTC.
+
+**Important**: If a job is created after the specified time, it will never run.
+
+## One-time Execution with Grace Period
+
+To schedule a job that can still run if created slightly after its intended time (useful for handling network latency or delayed job creation):
+
+```
+@after <datetime> <duration>
+```
+
+Where:
+- "datetime" is a string in [RFC3339 format](https://golang.org/pkg/time/#Parse)
+- "duration" is a grace period in [ISO8601 duration format](https://en.wikipedia.org/wiki/ISO_8601#Durations), prefixed with `<`
+
+**Behavior**:
+- If the job is created **before** the scheduled time → it runs at the scheduled time
+- If the job is created **within the grace period** after the scheduled time → it runs immediately
+- If the job is created **after the grace period** → it never runs
+
+**Duration Format**:
+The grace period uses ISO8601 duration format: `P[n]Y[n]M[n]DT[n]H[n]M[n]S`
+- `P` - Period designator (required)
+- `T` - Time designator (required for hours, minutes, seconds)
+- Years: `P1Y` = 1 year (365 days approximation)
+- Months: `P1M` = 1 month (30 days approximation)
+- Days: `P1D` = 1 day
+- Hours: `PT1H` = 1 hour
+- Minutes: `PT1M` = 1 minute
+- Seconds: `PT1S` = 1 second
+
+**Examples**:
+
+```
+@after 2023-12-31T23:59:00Z <PT2H
+```
+Runs at 11:59 PM UTC on December 31, 2023, or immediately if created up to 2 hours late.
+
+```
+@after 2024-01-01T09:00:00Z <PT30M
+```
+Runs at 9:00 AM on January 1, 2024, or immediately if created up to 30 minutes late.
+
+```
+@after 2024-01-15T00:00:00Z <P1D
+```
+Runs at midnight on January 15, 2024, or immediately if created up to 1 day late.
+
+```
+@after 2024-02-01T02:00:00Z <P1DT2H30M
+```
+Runs at 2:00 AM on February 1, 2024, or immediately if created up to 1 day, 2 hours, and 30 minutes late.
+
+**Use Cases**:
+- **Network Latency Tolerance**: When creating jobs via API, network delays might cause the job to be created after its intended execution time. The grace period allows it to still run.
+- **Flexible Maintenance Windows**: Schedule maintenance tasks that can run anytime within a specific window.
+- **Event-Based Execution**: Jobs that should run once after a specific event time but need flexibility for delayed creation.
+
+**Note**: The grace period boundary is inclusive - a job created exactly at the end of the grace period will still run immediately.
 
 ## Time Zones
 

@@ -6,7 +6,7 @@ import { useRecordContext } from 'react-admin';
 
 const StatusField = () => {
     const record = useRecordContext();
-    
+
     if (!record) return null;
 
     const getStatusConfig = () => {
