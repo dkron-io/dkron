@@ -1,3 +1,5 @@
+> **⚠️ Note:** The `armv7` release is not working in builds starting with v4.1.x. We need help to investigate this issue. If you can help, please open an issue or submit a pull request.
+
 <p align="center">
 <img width="400" src="docs/images/DKRON_STICKER_OK_CMYK_RGB_CONV_300.png" alt="Dkron" title="Dkron" />
 </p>
