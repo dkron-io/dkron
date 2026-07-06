@@ -75,6 +75,7 @@ func TestAPIJobCreateUpdate(t *testing.T) {
 	var origJob Job
 	err = json.Unmarshal(body, &origJob)
 	require.NoError(t, err)
+	assert.Equal(t, origJob.Name, origJob.ID)
 
 	jsonStr1 := []byte(`{
 		"name": "test_job",
@@ -97,6 +98,7 @@ func TestAPIJobCreateUpdate(t *testing.T) {
 	}
 
 	assert.Equal(t, origJob.Name, overwriteJob.Name)
+	assert.Equal(t, overwriteJob.Name, overwriteJob.ID)
 	assert.False(t, overwriteJob.Disabled)
 	assert.NotEqual(t, origJob.ExecutorConfig["command"], overwriteJob.ExecutorConfig["command"])
 	assert.Equal(t, "test", overwriteJob.ExecutorConfig["command"])
