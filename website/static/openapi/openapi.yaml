@@ -549,7 +549,7 @@ paths:
       tags:
         - policies
       description: |
-        Show a policy.
+        Show a policy. Requires a management token.
       operationId: showPolicyByName
       parameters:
         - name: name
@@ -565,13 +565,19 @@ paths:
           description: Successful response
           content:
             application/json:
-              schema:
-                $ref: '#/components/schemas/policy'
+                schema:
+                  $ref: '#/components/schemas/policy'
+        "401":
+          description: Missing or invalid bearer token
+        "403":
+          description: A management token is required
+        "404":
+          description: Policy not found
     post:
       tags:
         - policies
       description: |
-        Store or updates a policy.
+        Store or update a policy. Requires a management token.
       operationId: upsertPolicy
       parameters:
         - name: name
@@ -583,17 +589,19 @@ paths:
           schema:
             type: string
       responses:
-        "202":
+        "200":
           description: Successful response
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/policy'
+        "401":
+          description: Missing or invalid bearer token
+        "403":
+          description: A management token is required
+        "500":
+          description: Internal error
     delete:
       tags:
         - policies
       description: |
-        Delete a policy.
+        Delete a policy. Requires a management token.
       operationId: deletePolicy
       parameters:
         - name: name
@@ -607,10 +615,12 @@ paths:
       responses:
         "200":
           description: Successful response
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/policy'
+        "401":
+          description: Missing or invalid bearer token
+        "403":
+          description: A management token is required
+        "500":
+          description: Internal error
 components:
   schemas:
     status:
@@ -956,9 +966,8 @@ components:
             $ref: '#/components/schemas/execution_stat'
   securitySchemes:
     TokenAuth:
-      type: apiKey
-      in: header
-      name: X-Dkron-Token
+      type: http
+      scheme: bearer
 
 security:
   - TokenAuth: [ ]
