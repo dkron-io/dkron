@@ -174,14 +174,16 @@ Check the full documentation on all the available [ACL management commands](cli/
 }
 ```
 
-Write the readonly file content json to a local file named `readonly.json` and create the readonly policy:
+Save the JSON above to a local file named `readonly.json`. The policy document must have `path` at its top level; do not wrap it in a `rules` object.
+
+Create or update the `readonly` policy from that file. The `--rules-file` flag belongs to `acl policy apply`:
 
 ```
 dkron acl policy apply --name readonly --rules-file ./readonly.json
 ```
 
 
-Create a new token for a readonly user:
+Then create a client token and associate the existing `readonly` policy with it. `acl token create` accepts `--policy`, but it does not accept `--rules-file`:
 
 ```
 dkron acl token create --name alice --type client --policy readonly
