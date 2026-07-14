@@ -10,7 +10,7 @@ require (
 	github.com/gin-contrib/cors v1.7.7
 	github.com/gin-contrib/expvar v1.0.4
 	github.com/gin-gonic/gin v1.12.0
-	github.com/hashicorp/go-discover v1.2.0
+	github.com/hashicorp/go-discover v1.3.0
 	github.com/hashicorp/go-hclog v1.6.3
 	github.com/hashicorp/go-metrics v0.6.0
 	github.com/hashicorp/go-multierror v1.1.1
@@ -74,6 +74,7 @@ require (
 	github.com/Azure/go-autorest/tracing v0.6.0 // indirect
 	github.com/DataDog/datadog-go v4.8.3+incompatible // indirect
 	github.com/Microsoft/go-winio v0.6.2 // indirect
+	github.com/TritonDataCenter/triton-go/v2 v2.0.0-pre4 // indirect
 	github.com/armon/go-metrics v0.4.1 // indirect
 	github.com/aws/aws-sdk-go-v2 v1.33.0 // indirect
 	github.com/aws/aws-sdk-go-v2/config v1.29.1 // indirect
@@ -155,7 +156,6 @@ require (
 	github.com/jcmturner/rpc/v2 v2.0.3 // indirect
 	github.com/jhump/protoreflect/v2 v2.0.0-beta.1 // indirect
 	github.com/jmespath/go-jmespath v0.4.0 // indirect
-	github.com/joyent/triton-go v0.0.0-20180628001255-830d2b111e62 // indirect
 	github.com/json-iterator/go v1.1.12 // indirect
 	github.com/klauspost/compress v1.19.0 // indirect
 	github.com/klauspost/cpuid/v2 v2.3.0 // indirect
