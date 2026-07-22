@@ -304,6 +304,7 @@ func (h *HTTPTransport) jobCreateOrUpdateHandler(c *gin.Context) {
 			job.Owner = accessor
 		}
 	}
+	job.ID = job.Name
 
 	// Validate job
 	if err := job.Validate(); err != nil {
