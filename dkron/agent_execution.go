@@ -7,6 +7,10 @@ import (
 )
 
 func (a *Agent) applySetExecution(execution *typesv1.Execution) error {
+	if !a.IsLeader() {
+		return ErrNotLeader
+	}
+
 	cmd, err := Encode(SetExecutionType, execution)
 	if err != nil {
 		return err
