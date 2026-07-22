@@ -7,9 +7,9 @@ import (
 	"net"
 	"time"
 
-	"github.com/hashicorp/go-metrics"
 	typesv1 "github.com/distribworks/dkron/v4/gen/proto/types/v1"
 	"github.com/distribworks/dkron/v4/plugin"
+	"github.com/hashicorp/go-metrics"
 	"github.com/hashicorp/raft"
 	"github.com/hashicorp/serf/serf"
 	"github.com/sirupsen/logrus"
@@ -435,14 +435,7 @@ func (grpcs *GRPCServer) SetExecution(ctx context.Context, execution *typesv1.Ex
 		"execution": execution.Key(),
 	}).Debug("grpc: Received SetExecution")
 
-	cmd, err := Encode(SetExecutionType, execution)
-	if err != nil {
-		grpcs.logger.WithError(err).Fatal("agent: encode error in SetExecution")
-		return nil, err
-	}
-	af := grpcs.agent.raft.Apply(cmd, raftTimeout)
-	if err := af.Error(); err != nil {
-		grpcs.logger.WithError(err).Fatal("agent: error applying SetExecutionType")
+	if err := grpcs.agent.applySetExecution(execution); err != nil {
 		return nil, err
 	}
 

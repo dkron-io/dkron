@@ -136,6 +136,8 @@ type Agent struct {
 	// pauseNewJobs controls whether new jobs can be created or updated
 	pauseNewJobs bool
 	pauseMu      sync.RWMutex
+
+	isLeaderFn func() bool
 }
 
 // ProcessorFactory is a function type that creates a new instance
@@ -671,6 +673,9 @@ func (a *Agent) leaderMember() (*serf.Member, error) {
 
 // IsLeader checks if this server is the cluster leader
 func (a *Agent) IsLeader() bool {
+	if a.isLeaderFn != nil {
+		return a.isLeaderFn()
+	}
 	if a.raft == nil {
 		return false
 	}

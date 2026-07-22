@@ -187,6 +187,47 @@ func TestGRPCExecutionDone(t *testing.T) {
 	})
 }
 
+func TestGRPCSetExecution_returns_error_when_raft_unavailable(t *testing.T) {
+	// Given
+	server := &GRPCServer{
+		agent: &Agent{
+			isLeaderFn: func() bool { return true },
+		},
+		logger: getTestLogger(),
+	}
+	execution := &typesv1.Execution{
+		JobName:  "test",
+		NodeName: "testNode",
+	}
+
+	// When
+	var err error
+	require.NotPanics(t, func() {
+		_, err = server.SetExecution(context.Background(), execution)
+	})
+
+	// Then
+	require.EqualError(t, err, "raft apply unavailable")
+}
+
+func TestGRPCSetExecution_returns_error_when_not_leader(t *testing.T) {
+	// Given
+	server := &GRPCServer{
+		agent:  &Agent{},
+		logger: getTestLogger(),
+	}
+	execution := &typesv1.Execution{
+		JobName:  "test",
+		NodeName: "testNode",
+	}
+
+	// When
+	_, err := server.SetExecution(context.Background(), execution)
+
+	// Then
+	require.ErrorIs(t, err, ErrNotLeader)
+}
+
 func TestIsRetryableError(t *testing.T) {
 	tests := []struct {
 		name     string
