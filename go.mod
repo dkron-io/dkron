@@ -2,7 +2,7 @@ module github.com/distribworks/dkron/v4
 
 require (
 	cloud.google.com/go/pubsub v1.51.0
-	github.com/IBM/sarama v1.60.0
+	github.com/IBM/sarama v1.60.1
 	github.com/armon/circbuf v0.0.0-20190214190532-5111143e8da2
 	github.com/devopsfaith/krakend-usage v1.4.0
 	github.com/fluent/fluent-logger-golang v1.10.1
@@ -157,7 +157,7 @@ require (
 	github.com/jhump/protoreflect/v2 v2.0.0-beta.1 // indirect
 	github.com/jmespath/go-jmespath v0.4.0 // indirect
 	github.com/json-iterator/go v1.1.12 // indirect
-	github.com/klauspost/compress v1.19.0 // indirect
+	github.com/klauspost/compress v1.19.1 // indirect
 	github.com/klauspost/cpuid/v2 v2.3.0 // indirect
 	github.com/leodido/go-urn v1.4.0 // indirect
 	github.com/linode/linodego v1.61.0 // indirect
