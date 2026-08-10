@@ -6,8 +6,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/hashicorp/go-metrics"
 	typesv1 "github.com/distribworks/dkron/v4/gen/proto/types/v1"
+	"github.com/hashicorp/go-metrics"
 	"github.com/sirupsen/logrus"
 	"go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc"
 	"golang.org/x/net/context"
@@ -172,7 +172,7 @@ func (grpcc *GRPCClient) Leave(addr string) error {
 func (grpcc *GRPCClient) SetJob(job *Job) error {
 	var conn *grpc.ClientConn
 
-	addr := grpcc.agent.raft.Leader()
+	addr := grpcc.agent.Leader()
 
 	// Initiate a connection with the server
 	conn, err := grpcc.Connect(string(addr))
@@ -204,7 +204,7 @@ func (grpcc *GRPCClient) SetJob(job *Job) error {
 func (grpcc *GRPCClient) DeleteJob(jobName string) (*Job, error) {
 	var conn *grpc.ClientConn
 
-	addr := grpcc.agent.raft.Leader()
+	addr := grpcc.agent.Leader()
 
 	// Initiate a connection with the server
 	conn, err := grpcc.Connect(string(addr))
@@ -243,7 +243,7 @@ func (grpcc *GRPCClient) DeleteExecutions(jobName string) (*Job, error) {
 
 	var conn *grpc.ClientConn
 
-	addr := grpcc.agent.raft.Leader()
+	addr := grpcc.agent.Leader()
 
 	// Initiate a connection with the server
 	conn, err := grpcc.Connect(string(addr))
@@ -278,7 +278,7 @@ func (grpcc *GRPCClient) DeleteExecutions(jobName string) (*Job, error) {
 func (grpcc *GRPCClient) RunJob(jobName string) (*Job, error) {
 	var conn *grpc.ClientConn
 
-	addr := grpcc.agent.raft.Leader()
+	addr := grpcc.agent.Leader()
 
 	// Initiate a connection with the server
 	conn, err := grpcc.Connect(string(addr))
@@ -402,7 +402,7 @@ func (grpcc *GRPCClient) GetActiveExecutions(addr string) ([]*typesv1.Execution,
 func (grpcc *GRPCClient) SetExecution(execution *typesv1.Execution) error {
 	var conn *grpc.ClientConn
 
-	addr := grpcc.agent.raft.Leader()
+	addr := grpcc.agent.Leader()
 
 	// Initiate a connection with the server
 	conn, err := grpcc.Connect(string(addr))
@@ -559,7 +559,7 @@ func (grpcc *GRPCClient) agentRunAttempt(addr string, job *typesv1.Job, executio
 
 		// Stream ends
 		if err == io.EOF {
-			addr := grpcc.agent.raft.Leader()
+			addr := grpcc.agent.Leader()
 			if err := grpcc.ExecutionDone(string(addr), NewExecutionFromProto(execution)); err != nil {
 				return err
 			}
@@ -575,7 +575,7 @@ func (grpcc *GRPCClient) agentRunAttempt(addr string, job *typesv1.Job, executio
 
 			grpcc.logger.WithError(err).Error(ErrBrokenStream)
 
-			addr := grpcc.agent.raft.Leader()
+			addr := grpcc.agent.Leader()
 			if err := grpcc.ExecutionDone(string(addr), NewExecutionFromProto(execution)); err != nil {
 				return err
 			}

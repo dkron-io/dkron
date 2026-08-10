@@ -390,16 +390,20 @@ func Test_advertiseRPCAddr(t *testing.T) {
 	c.HTTPAddr = "127.0.0.1:0"
 
 	a := NewAgent(c)
-	_ = a.Start()
-
-	time.Sleep(2 * time.Second)
+	require.NoError(t, a.Start())
+	t.Cleanup(func() { require.NoError(t, a.Stop()) })
+	require.Eventually(t, a.IsLeader, 5*time.Second, 100*time.Millisecond)
 
 	advertiseRPCAddr := a.advertiseRPCAddr()
 	exRPCAddr := "8.8.8.8:6868"
 
 	assert.Equal(t, exRPCAddr, advertiseRPCAddr)
+	assert.Equal(t, exRPCAddr, string(a.raftTransport.LocalAddr()))
+	assert.Equal(t, exRPCAddr, string(a.Leader()))
 
-	_ = a.Stop()
+	leader, err := a.leaderMember()
+	require.NoError(t, err)
+	assert.Equal(t, c.NodeName, leader.Name)
 }
 
 func Test_bindRPCAddr(t *testing.T) {

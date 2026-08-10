@@ -14,8 +14,9 @@ import (
 type RaftLayer struct {
 	TLSConfig *tls.Config
 
-	ln     net.Listener
-	logger *logrus.Entry
+	ln            net.Listener
+	advertiseAddr net.Addr
+	logger        *logrus.Entry
 }
 
 // NewRaftLayer returns an initialized unencrypted RaftLayer.
@@ -35,6 +36,13 @@ func NewTLSRaftLayer(tlsConfig *tls.Config, logger *logrus.Entry) *RaftLayer {
 func (t *RaftLayer) Open(l net.Listener) error {
 	t.ln = l
 	return nil
+}
+
+// SetAdvertiseAddr sets the reachable address Raft should publish for this
+// transport. The listener may be bound to an unspecified address, which is
+// valid for accepting connections but cannot be used as a dial target.
+func (t *RaftLayer) SetAdvertiseAddr(addr net.Addr) {
+	t.advertiseAddr = addr
 }
 
 // Dial opens a network connection.
@@ -67,7 +75,11 @@ func (t *RaftLayer) Close() error {
 	return t.ln.Close()
 }
 
-// Addr returns the binding address of the RaftLayer.
+// Addr returns the advertised address of the RaftLayer, falling back to the
+// binding address when no advertised address has been configured.
 func (t *RaftLayer) Addr() net.Addr {
+	if t.advertiseAddr != nil {
+		return t.advertiseAddr
+	}
 	return t.ln.Addr()
 }
