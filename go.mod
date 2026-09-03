@@ -2,7 +2,7 @@ module github.com/distribworks/dkron/v4
 
 require (
 	cloud.google.com/go/pubsub v1.51.1
-	github.com/IBM/sarama v1.60.1
+	github.com/IBM/sarama v1.60.2
 	github.com/armon/circbuf v0.0.0-20190214190532-5111143e8da2
 	github.com/devopsfaith/krakend-usage v1.4.0
 	github.com/fluent/fluent-logger-golang v1.10.1
@@ -157,7 +157,7 @@ require (
 	github.com/jhump/protoreflect/v2 v2.0.0-beta.1 // indirect
 	github.com/jmespath/go-jmespath v0.4.0 // indirect
 	github.com/json-iterator/go v1.1.12 // indirect
-	github.com/klauspost/compress v1.19.1 // indirect
+	github.com/klauspost/compress v1.19.2 // indirect
 	github.com/klauspost/cpuid/v2 v2.3.0 // indirect
 	github.com/kylelemons/godebug v1.1.0 // indirect
 	github.com/leodido/go-urn v1.4.0 // indirect
@@ -178,7 +178,7 @@ require (
 	github.com/pelletier/go-toml/v2 v2.3.1 // indirect
 	github.com/petermattis/goid v0.0.0-20260113132338-7c7de50cc741 // indirect
 	github.com/philhofer/fwd v1.2.0 // indirect
-	github.com/pierrec/lz4/v4 v4.1.27 // indirect
+	github.com/pierrec/lz4/v4 v4.1.29 // indirect
 	github.com/pkg/browser v0.0.0-20240102092130-5ac0b6a4141c // indirect
 	github.com/planetscale/vtprotobuf v0.6.1-0.20240319094008-0393e58bdf10 // indirect
 	github.com/power-devops/perfstat v0.0.0-20210106213030-5aafc221ea8c // indirect
