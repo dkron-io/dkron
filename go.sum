@@ -225,8 +225,8 @@ github.com/fullstorydev/grpcurl v1.9.4/go.mod h1:XSwqtBookFHuhG8guCuQUZJ4Pq0bDuF
 github.com/gabriel-vasile/mimetype v1.4.15 h1:05iP/CYtZ/w455R/KZM6rZ5ieAdh99UPtd+d3YzLmaI=
 github.com/gabriel-vasile/mimetype v1.4.15/go.mod h1:azpTcoLcDZRNgFou5j+APrqQx9HqVPWa6ijYQIIVswQ=
 github.com/ghodss/yaml v1.0.0/go.mod h1:4dBDuWmgqj2HViK6kFavaiC9ZROes6MMH2rRYeMEF04=
-github.com/gin-contrib/cors v1.7.7 h1:Oh9joP463x7Mw72vhvJ61YQm8ODh9b04YR7vsOErD0Q=
-github.com/gin-contrib/cors v1.7.7/go.mod h1:K5tW0RkzJtWSiOdikXloy8VEZlgdVNpHNw8FpjUPNrE=
+github.com/gin-contrib/cors v1.7.8 h1:U0jjyXlWXMEx27hFE6hmdg/TOZviYgsOGGT+kLmUZrc=
+github.com/gin-contrib/cors v1.7.8/go.mod h1:u3nLI2pP1IlJn7tbvL7iiubDO9quBZ8FXP9LxmqpsPI=
 github.com/gin-contrib/expvar v1.0.5 h1:dVCHGPa1k6Cg0AnISO3xkHP2ILDqvQeClhQ52PvsyoM=
 github.com/gin-contrib/expvar v1.0.5/go.mod h1:BRblefZ41NpK1gqE1WdpHZgUafUQ2On51s9IplfFlxA=
 github.com/gin-contrib/sse v1.1.1 h1:uGYpNwTacv5R68bSGMapo62iLTRa9l5zxGCps4hK6ko=
