@@ -56,21 +56,15 @@ func NewTransport(a *Agent, log *logrus.Entry) *HTTPTransport {
 
 func (h *HTTPTransport) ServeHTTP() {
 	h.Engine = gin.Default()
+	useCORS(h.Engine)
 
 	rootPath := h.Engine.Group("/")
-
-	config := cors.DefaultConfig()
-	config.AllowAllOrigins = true
-	config.AllowMethods = []string{"*"}
-	config.AllowHeaders = []string{"*"}
-	config.ExposeHeaders = []string{"*"}
 
 	// Skip tracing on auxiliary endpoints
 	filter := func(c *gin.Context) bool {
 		return !(strings.Contains(c.FullPath(), "metrics") || strings.Contains(c.FullPath(), "health") || strings.Contains(c.FullPath(), "ui"))
 	}
 	rootPath.Use(otelgin.Middleware("dkron-api", otelgin.WithGinFilter(filter))) // Adds OpenTelemetry tracing to HTTP API
-	rootPath.Use(cors.New(config))
 	rootPath.Use(h.MetaMiddleware())
 
 	h.APIRoutes(rootPath)
@@ -87,6 +81,15 @@ func (h *HTTPTransport) ServeHTTP() {
 			h.logger.WithError(err).Error("api: Error starting HTTP server")
 		}
 	}()
+}
+
+func useCORS(engine *gin.Engine) {
+	config := cors.DefaultConfig()
+	config.AllowAllOrigins = true
+	config.AllowMethods = []string{"*"}
+	config.AllowHeaders = []string{"*"}
+	config.ExposeHeaders = []string{"*"}
+	engine.Use(cors.New(config))
 }
 
 // APIRoutes registers the api routes on the gin RouterGroup.
@@ -303,6 +306,11 @@ func (h *HTTPTransport) jobCreateOrUpdateHandler(c *gin.Context) {
 		if accessor != "" {
 			job.Owner = accessor
 		}
+	}
+	if c.Request.Method == http.MethodPut && c.Param("job") != job.Name {
+		c.AbortWithStatus(http.StatusBadRequest)
+		_, _ = c.Writer.WriteString("Job name cannot be changed after creation.")
+		return
 	}
 	job.ID = job.Name
 

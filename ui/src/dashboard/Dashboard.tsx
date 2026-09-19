@@ -1,5 +1,5 @@
 import { Box, Card, CardContent, Typography } from '@mui/material';
-import { List, Datagrid, TextField } from 'react-admin';
+import { List, Datagrid, TextField, Title } from 'react-admin';
 import { TagsField } from '../TagsField';
 import Leader from './Leader';
 import FailedJobs from './FailedJobs';
@@ -8,6 +8,8 @@ import UntriggeredJobs from './UntriggeredJobs';
 import TotalJobs from './TotalJobs';
 import DnsIcon from '@mui/icons-material/Dns';
 import ExecutionStatsChart from './ExecutionStatsChart';
+import DashboardOutlinedIcon from '@mui/icons-material/DashboardOutlined';
+import { PageContainer, PageHeader } from '../layout/Page';
 
 const selectRowDisabled = () => false;
 
@@ -27,30 +29,15 @@ const fakeProps = {
 
 const Dashboard = () => {
     return (
-        <Box sx={{ p: { xs: 2, md: 3 } }}>
-            {/* Header Section */}
-            <Box sx={{ mb: 4 }}>
-                <Typography
-                    variant="h4"
-                    component="h1"
-                    sx={{
-                        fontWeight: 700,
-                        color: 'text.primary',
-                        mb: 1,
-                        fontSize: { xs: '1.75rem', md: '2.125rem' }
-                    }}
-                >
-                    Dashboard
-                </Typography>
-                <Typography
-                    variant="body1"
-                    sx={{ color: 'text.secondary' }}
-                >
-                    Monitor your distributed job scheduler at a glance
-                </Typography>
-            </Box>
+        <PageContainer>
+            <Title title="Dashboard" />
+            <PageHeader
+                icon={DashboardOutlinedIcon}
+                title="Dashboard"
+                description="Monitor your distributed job scheduler at a glance."
+                color="#1a365d"
+            />
 
-            {/* Stats Grid */}
             <Box
                 sx={{
                     display: 'grid',
@@ -61,7 +48,7 @@ const Dashboard = () => {
                         lg: 'repeat(5, 1fr)'
                     },
                     gap: { xs: 2, md: 3 },
-                    mb: 4
+                    mb: { xs: 3, md: 4 }
                 }}
             >
                 <Leader value={window.DKRON_LEADER || "devel"} />
@@ -71,16 +58,14 @@ const Dashboard = () => {
                 <UntriggeredJobs value={window.DKRON_UNTRIGGERED_JOBS || "0"} />
             </Box>
 
-            {/* Execution Stats Chart */}
-            <Box sx={{ mb: 4 }}>
+            <Box sx={{ mb: { xs: 3, md: 4 } }}>
                 <ExecutionStatsChart />
             </Box>
 
-            {/* Nodes Section */}
             <Card>
                 <Box
                     sx={{
-                        p: 3,
+                        p: { xs: 2, sm: 3 },
                         borderBottom: '1px solid',
                         borderColor: 'divider',
                         display: 'flex',
@@ -119,9 +104,10 @@ const Dashboard = () => {
                     </Box>
                 </Box>
                 <CardContent sx={{ p: 0, '&:last-child': { pb: 0 } }}>
-                    <List {...fakeProps}>
+                    <List {...fakeProps} title={false} actions={false}>
                         <Datagrid
                             isRowSelectable={selectRowDisabled}
+                            bulkActionButtons={false}
                             sx={{
                                 '& .RaDatagrid-headerCell': {
                                     backgroundColor: '#f7fafc',
@@ -145,7 +131,7 @@ const Dashboard = () => {
                     </List>
                 </CardContent>
             </Card>
-        </Box>
+        </PageContainer>
     );
 };
 

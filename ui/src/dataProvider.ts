@@ -3,7 +3,9 @@ import jsonServerProvider from 'ra-data-json-server';
 import { stringify } from 'query-string';
 import { DataProvider } from 'react-admin';
 
-export const apiUrl = window.DKRON_API_URL || 'http://localhost:8080/v1'
+const localApiUrl = `${window.location.protocol}//${window.location.hostname}:8080/v1`;
+
+export const apiUrl = window.DKRON_API_URL || localApiUrl;
 
 export const httpClient = (url: String, options: fetchUtils.Options = {}) => {
     if (!options.headers) {

@@ -80,12 +80,18 @@ export const lightTheme = {
         },
         MuiCardContent: {
             styleOverrides: {
-                root: {
-                    padding: '16px 24px 24px',
+                root: ({ theme }: any) => ({
+                    padding: theme.spacing(2, 3, 3),
                     '&:last-child': {
-                        paddingBottom: 24,
+                        paddingBottom: theme.spacing(3),
                     },
-                },
+                    [theme.breakpoints.down('sm')]: {
+                        padding: theme.spacing(2),
+                        '&:last-child': {
+                            paddingBottom: theme.spacing(2),
+                        },
+                    },
+                }),
             },
         },
         MuiButton: {
@@ -126,6 +132,7 @@ export const lightTheme = {
             styleOverrides: {
                 root: {
                     borderBottom: '1px solid #e2e8f0',
+                    padding: '12px 16px',
                 },
                 head: {
                     fontWeight: 600,
@@ -176,6 +183,21 @@ export const lightTheme = {
             styleOverrides: {
                 rounded: {
                     borderRadius: 12,
+                },
+            },
+        },
+        MuiDialogTitle: {
+            styleOverrides: {
+                root: {
+                    padding: '20px 24px 12px',
+                    fontWeight: 600,
+                },
+            },
+        },
+        MuiDialogContent: {
+            styleOverrides: {
+                root: {
+                    padding: '12px 24px 24px',
                 },
             },
         },

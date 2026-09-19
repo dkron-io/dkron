@@ -9,11 +9,13 @@ import (
 	"io/ioutil"
 	"mime/multipart"
 	"net/http"
+	"net/http/httptest"
 	"os"
 	"strings"
 	"testing"
 	"time"
 
+	"github.com/gin-gonic/gin"
 	"github.com/hashicorp/serf/testutil"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -102,6 +104,69 @@ func TestAPIJobCreateUpdate(t *testing.T) {
 	assert.False(t, overwriteJob.Disabled)
 	assert.NotEqual(t, origJob.ExecutorConfig["command"], overwriteJob.ExecutorConfig["command"])
 	assert.Equal(t, "test", overwriteJob.ExecutorConfig["command"])
+}
+
+func TestAPICORSPreflight(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	router := gin.New()
+	useCORS(router)
+	router.POST("/v1/jobs", func(c *gin.Context) {
+		c.Status(http.StatusCreated)
+	})
+
+	req, err := http.NewRequest(http.MethodOptions, "/v1/jobs", nil)
+	require.NoError(t, err)
+	req.Header.Set("Origin", "http://127.0.0.1:5173")
+	req.Header.Set("Access-Control-Request-Method", http.MethodPost)
+	req.Header.Set("Access-Control-Request-Headers", "content-type")
+
+	recorder := httptest.NewRecorder()
+	router.ServeHTTP(recorder, req)
+
+	assert.Equal(t, http.StatusNoContent, recorder.Code)
+	assert.Equal(t, "*", recorder.Header().Get("Access-Control-Allow-Origin"))
+}
+
+func TestAPIJobUpdateRejectsRename(t *testing.T) {
+	port := getFreePort(t)
+	baseURL := fmt.Sprintf("http://localhost:%s/v1", port)
+	dir, a := setupAPITest(t, port)
+	defer os.RemoveAll(dir)
+	defer a.Stop() // nolint: errcheck
+
+	createPayload := []byte(`{
+		"name": "original_job",
+		"schedule": "@manually",
+		"executor": "shell",
+		"executor_config": {"command": "date"}
+	}`)
+	resp, err := http.Post(baseURL+"/jobs", "application/json", bytes.NewBuffer(createPayload))
+	require.NoError(t, err)
+	resp.Body.Close()
+	require.Equal(t, http.StatusCreated, resp.StatusCode)
+
+	renamePayload := []byte(`{
+		"name": "renamed_job",
+		"schedule": "@manually",
+		"executor": "shell",
+		"executor_config": {"command": "date"}
+	}`)
+	req, err := http.NewRequest(http.MethodPut, baseURL+"/jobs/original_job", bytes.NewBuffer(renamePayload))
+	require.NoError(t, err)
+	req.Header.Set("Content-Type", "application/json")
+	resp, err = http.DefaultClient.Do(req)
+	require.NoError(t, err)
+	defer resp.Body.Close()
+
+	body, err := io.ReadAll(resp.Body)
+	require.NoError(t, err)
+	assert.Equal(t, http.StatusBadRequest, resp.StatusCode)
+	assert.Contains(t, string(body), "Job name cannot be changed")
+
+	resp, err = http.Get(baseURL + "/jobs/renamed_job")
+	require.NoError(t, err)
+	resp.Body.Close()
+	assert.Equal(t, http.StatusNotFound, resp.StatusCode)
 }
 
 func TestAPIJobCreateUpdateParentJob_SameParent(t *testing.T) {

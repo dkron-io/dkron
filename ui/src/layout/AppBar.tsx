@@ -78,7 +78,7 @@ const CustomAppBar = (props: any) => {
             <span className={classes.spacer} />
             <Box
                 sx={{
-                    display: 'flex',
+                    display: { xs: 'none', sm: 'flex' },
                     alignItems: 'center',
                     gap: 2,
                     mr: 1,
