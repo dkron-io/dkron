@@ -42,7 +42,7 @@ import {
     Typography,
 } from '@mui/material';
 import { ProcessorsInput } from './ProcessorsInput';
-import { StringMap, StringMapInput } from './StringMapInput';
+import { EDITOR_ERRORS_FIELD, StringMap, StringMapInput } from './StringMapInput';
 import { pagePadding } from '../layout/Page';
 
 const executorChoices = [
@@ -311,6 +311,8 @@ const ExecutorConfigInput = () => {
 const JobFormToolbar = ({ creating }: { creating: boolean }) => {
     const navigate = useNavigate();
     const { isDirty } = useFormState();
+    const editorErrors = useWatch({ name: EDITOR_ERRORS_FIELD }) as Record<string, string | undefined> | undefined;
+    const hasEditorErrors = Object.values(editorErrors ?? {}).some(Boolean);
     return (
         <Toolbar
             sx={{
@@ -322,7 +324,10 @@ const JobFormToolbar = ({ creating }: { creating: boolean }) => {
                 gap: 1,
             }}
         >
-            <SaveButton label={creating ? 'Create job' : 'Save changes'} />
+            <SaveButton
+                label={creating ? 'Create job' : 'Save changes'}
+                disabled={hasEditorErrors}
+            />
             <RaButton label="Cancel" onClick={() => navigate(-1)}>
                 <ArrowBackIcon />
             </RaButton>
@@ -376,7 +381,17 @@ const validateJob = (values: Record<string, any>) => {
     if (values.executor === 'gcppubsub' && !config.data && !config.attributes) {
         errors.executor_config = 'Google Pub/Sub requires data or attributes.';
     }
+    const editorErrors = values[EDITOR_ERRORS_FIELD] as Record<string, string | undefined> | undefined;
+    Object.entries(editorErrors ?? {}).forEach(([source, message]) => {
+        if (message) errors[source] = message;
+    });
     return errors;
+};
+
+const prepareJobForSave = (values: Record<string, any>) => {
+    const job = { ...values };
+    delete job[EDITOR_ERRORS_FIELD];
+    return job;
 };
 
 const defaultValues = {
@@ -558,6 +573,7 @@ export const JobEdit = () => (
     <Edit
         actions={false}
         mutationMode="pessimistic"
+        transform={prepareJobForSave}
         sx={{
             '& .RaEdit-main': { p: pagePadding },
             '& .RaEdit-card': { width: '100%', maxWidth: 1184, mx: 'auto' },
@@ -571,6 +587,7 @@ export const JobCreate = () => (
     <Create
         actions={false}
         mutationMode="pessimistic"
+        transform={prepareJobForSave}
         sx={{
             '& .RaCreate-main': { p: pagePadding },
             '& .RaCreate-card': { width: '100%', maxWidth: 1184, mx: 'auto' },

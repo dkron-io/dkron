@@ -63,7 +63,6 @@ export const AdvancedJsonEditor = <T extends JsonRecord>({
         if (!open) {
             setText(serialize(value));
             setError(undefined);
-            onValidityChange?.(true);
             setOpen(true);
             return;
         }

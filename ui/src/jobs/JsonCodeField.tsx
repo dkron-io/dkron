@@ -2,17 +2,25 @@ import { useState } from 'react';
 import CheckIcon from '@mui/icons-material/Check';
 import ContentCopyIcon from '@mui/icons-material/ContentCopy';
 import { Box, IconButton, Tooltip, Typography } from '@mui/material';
-import { useRecordContext } from 'react-admin';
+import { useNotify, useRecordContext } from 'react-admin';
 
 export const JsonCodeField = ({ source }: { source: string }) => {
     const record = useRecordContext();
+    const notify = useNotify();
     const [copied, setCopied] = useState(false);
     const text = JSON.stringify(record?.[source] ?? {}, null, 2);
 
     const copy = async () => {
-        await navigator.clipboard.writeText(text);
-        setCopied(true);
-        window.setTimeout(() => setCopied(false), 1500);
+        try {
+            if (!navigator.clipboard?.writeText) {
+                throw new Error('Clipboard API unavailable');
+            }
+            await navigator.clipboard.writeText(text);
+            setCopied(true);
+            window.setTimeout(() => setCopied(false), 1500);
+        } catch {
+            notify('Unable to copy JSON', { type: 'warning' });
+        }
     };
 
     return (
@@ -56,4 +64,3 @@ export const JsonCodeField = ({ source }: { source: string }) => {
         </Box>
     );
 };
-

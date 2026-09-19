@@ -52,10 +52,10 @@ const JobBulkActionButtons = () => (
 
 const JobPagination = (props: any) => <Pagination rowsPerPageOptions={[5, 10, 25, 50, 100]} {...props} />;
 
-const NextRunField = () => {
+const NextRunField = ({ source, label }: { source: string; label?: string }) => {
     const record = useRecordContext();
 
-    if (!record?.next || record.next === '0001-01-01T00:00:00Z') {
+    if (!record?.[source] || record[source] === '0001-01-01T00:00:00Z') {
         return (
             <Typography component="span" variant="body2" color="text.secondary" sx={{ whiteSpace: 'nowrap' }}>
                 {record?.schedule === '@manually' ? 'Manual trigger' : 'Not scheduled'}
@@ -63,7 +63,7 @@ const NextRunField = () => {
         );
     }
 
-    return <DateField source="next" showTime />;
+    return <DateField source={source} label={label} showTime />;
 };
 
 const PREFIX = 'JobList';
@@ -188,7 +188,7 @@ const JobList = (props: any) => {
                     <EnabledField label="Enabled" />
                     <NumberField source="retries" sortable={false} />
                     <StatusField />
-                    <NextRunField />
+                    <NextRunField source="next" label="Next run" />
                     <EditButton/>
                 </StyledDatagrid>
             </List>

@@ -16,7 +16,12 @@ import {
 import { InputHelperText, useInput } from 'react-admin';
 import { useFormContext } from 'react-hook-form';
 import { AdvancedJsonEditor } from './AdvancedJsonEditor';
-import { KeyValueEditor, StringMap, validateStringMap } from './StringMapInput';
+import {
+    EDITOR_ERRORS_FIELD,
+    KeyValueEditor,
+    StringMap,
+    validateStringMap,
+} from './StringMapInput';
 
 type ProcessorsMap = Record<string, StringMap>;
 
@@ -68,7 +73,7 @@ export const ProcessorsInput = () => {
         field,
         fieldState: { error },
     } = useInput({ source, defaultValue: {} });
-    const { clearErrors, setError } = useFormContext();
+    const { clearErrors, setError, setValue, trigger } = useFormContext();
     const [entries, setEntries] = useState<ProcessorEntry[]>(() =>
         entriesFromMap((field.value ?? {}) as ProcessorsMap),
     );
@@ -84,8 +89,17 @@ export const ProcessorsInput = () => {
     }, [field.value, valueSignature]);
 
     const setFormError = (message?: string) => {
-        if (message) setError(source, { type: 'validate', message });
-        else clearErrors(source);
+        setValue(`${EDITOR_ERRORS_FIELD}.${source}`, message, {
+            shouldDirty: false,
+            shouldTouch: false,
+            shouldValidate: false,
+        });
+        if (message) {
+            setError(source, { type: 'validate', message });
+        } else {
+            clearErrors(source);
+        }
+        void trigger(source);
     };
 
     const commit = (nextEntries: ProcessorEntry[]) => {

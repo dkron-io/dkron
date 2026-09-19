@@ -19,6 +19,7 @@ import { useFormContext } from 'react-hook-form';
 import { AdvancedJsonEditor } from './AdvancedJsonEditor';
 
 export type StringMap = Record<string, string>;
+export const EDITOR_ERRORS_FIELD = '__editor_errors';
 
 interface MapRow {
     id: number;
@@ -246,11 +247,21 @@ export const StringMapInput = ({
         fieldState: { error },
         isRequired,
     } = useInput({ source, defaultValue: {} });
-    const { clearErrors, setError } = useFormContext();
+    const { clearErrors, setError, setValue, trigger } = useFormContext();
 
     const handleValidityChange = (valid: boolean, message?: string) => {
-        if (valid) clearErrors(source);
-        else setError(source, { type: 'validate', message });
+        const validationMessage = valid ? undefined : (message || 'Fix the invalid editor value.');
+        setValue(`${EDITOR_ERRORS_FIELD}.${source}`, validationMessage, {
+            shouldDirty: false,
+            shouldTouch: false,
+            shouldValidate: false,
+        });
+        if (validationMessage) {
+            setError(source, { type: 'validate', message: validationMessage });
+        } else {
+            clearErrors(source);
+        }
+        void trigger(source);
     };
 
     return (
