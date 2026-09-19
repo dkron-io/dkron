@@ -227,8 +227,8 @@ github.com/gabriel-vasile/mimetype v1.4.15/go.mod h1:azpTcoLcDZRNgFou5j+APrqQx9H
 github.com/ghodss/yaml v1.0.0/go.mod h1:4dBDuWmgqj2HViK6kFavaiC9ZROes6MMH2rRYeMEF04=
 github.com/gin-contrib/cors v1.7.7 h1:Oh9joP463x7Mw72vhvJ61YQm8ODh9b04YR7vsOErD0Q=
 github.com/gin-contrib/cors v1.7.7/go.mod h1:K5tW0RkzJtWSiOdikXloy8VEZlgdVNpHNw8FpjUPNrE=
-github.com/gin-contrib/expvar v1.0.4 h1:Eb5nSLCCcRwuCLYaqAkRYQxGmYcDtlGQBPl4J5dkQXM=
-github.com/gin-contrib/expvar v1.0.4/go.mod h1:+ZpFV/Z70wx26sso7vJGk+ZB80+lP3GzsvW/efIedtU=
+github.com/gin-contrib/expvar v1.0.5 h1:dVCHGPa1k6Cg0AnISO3xkHP2ILDqvQeClhQ52PvsyoM=
+github.com/gin-contrib/expvar v1.0.5/go.mod h1:BRblefZ41NpK1gqE1WdpHZgUafUQ2On51s9IplfFlxA=
 github.com/gin-contrib/sse v1.1.1 h1:uGYpNwTacv5R68bSGMapo62iLTRa9l5zxGCps4hK6ko=
 github.com/gin-contrib/sse v1.1.1/go.mod h1:QXzuVkA0YO7o/gun03UI1Q+FTI8ZV/n5t03kIQAI89s=
 github.com/gin-gonic/gin v1.12.0 h1:b3YAbrZtnf8N//yjKeU2+MQsh2mY5htkZidOM7O0wG8=
