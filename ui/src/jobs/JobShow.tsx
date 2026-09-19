@@ -17,8 +17,8 @@ import {
 } from "react-admin";
 import ToggleButton from "./ToggleButton";
 import RunButton from "./RunButton";
-import { JsonField } from "react-admin-json-view";
 import ZeroDateField from "./ZeroDateField";
+import { JsonCodeField } from "./JsonCodeField";
 import JobIcon from "@mui/icons-material/Update";
 import FullIcon from "@mui/icons-material/BatteryFull";
 import ScheduleIcon from "@mui/icons-material/Schedule";
@@ -244,20 +244,7 @@ const FieldGroup = ({ children }: { children: React.ReactNode }) => (
 const StyledJsonField = ({ source, label }: { source: string; label?: string }) => (
   <Box sx={{ mt: 2 }}>
     <Labeled label={label || source}>
-      <JsonField
-        source={source}
-        reactJsonOptions={{
-          name: null,
-          collapsed: false,
-          enableClipboard: true,
-          displayDataTypes: false,
-          style: {
-            backgroundColor: "#f7fafc",
-            padding: "12px",
-            borderRadius: "8px",
-          },
-        }}
-      />
+      <JsonCodeField source={source} />
     </Labeled>
   </Box>
 );
