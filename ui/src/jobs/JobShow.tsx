@@ -5,7 +5,6 @@ import {
   DateField,
   EditButton,
   BooleanField,
-  TopToolbar,
   Show,
   TabbedShowLayout,
   Tab,
@@ -32,14 +31,7 @@ import { Box, Card, CardContent, Typography, Chip, Tooltip } from "@mui/material
 import { useState } from "react";
 import { apiUrl, httpClient } from "../dataProvider";
 import JobDependencyDiagram from "./JobDependencyDiagram";
-
-const JobShowActions = ({ data }: any) => (
-  <TopToolbar sx={{ gap: 1, mt: 2, mb: 1 }}>
-    <RunButton />
-    <ToggleButton />
-    <EditButton record={data} />
-  </TopToolbar>
-);
+import { pagePadding } from "../layout/Page";
 
 const SuccessField = () => {
   const record = useRecordContext();
@@ -163,20 +155,23 @@ const StatusChip = () => {
   const record = useRecordContext();
   if (!record) return null;
 
-  const status = record.status;
+  const status = record.status || "pending";
   const colorMap: Record<string, "success" | "error" | "warning" | "default"> = {
     success: "success",
     failed: "error",
     running: "warning",
     untriggered: "default",
+    pending: "default",
   };
+
+  const label = status.charAt(0).toUpperCase() + status.slice(1).replace(/_/g, " ");
 
   return (
     <Chip
-      label={status || "unknown"}
+      label={label}
       color={colorMap[status] || "default"}
       size="small"
-      sx={{ fontWeight: 500 }}
+      sx={{ fontWeight: 500, width: "fit-content", alignSelf: "flex-start" }}
     />
   );
 };
@@ -187,7 +182,14 @@ const JobHeader = () => {
 
   return (
     <Box sx={{ mb: 3 }}>
-      <Box sx={{ display: "flex", alignItems: "center", gap: 2, mb: 1 }}>
+      <Box
+        sx={{
+          display: "flex",
+          alignItems: { xs: "flex-start", sm: "center" },
+          flexWrap: "wrap",
+          gap: { xs: 1.5, sm: 2 },
+        }}
+      >
         <Box
           sx={{
             width: 48,
@@ -203,7 +205,7 @@ const JobHeader = () => {
         >
           <JobIcon />
         </Box>
-        <Box>
+        <Box sx={{ minWidth: 0, flex: "1 1 260px" }}>
           <Typography
             variant="h5"
             sx={{ fontWeight: 600, color: "text.primary" }}
@@ -214,12 +216,29 @@ const JobHeader = () => {
             {record.schedule} {record.timezone && `(${record.timezone})`}
           </Typography>
         </Box>
-        <Box sx={{ ml: "auto" }}>
+        <Box>
           <StatusChip />
+        </Box>
+        <Box sx={{ display: "flex", gap: 0.5, ml: { sm: 0.5 } }}>
+          <RunButton />
+          <ToggleButton />
+          <EditButton />
         </Box>
       </Box>
     </Box>
   );
+};
+
+const NextRunField = () => {
+  const record = useRecordContext();
+  if (!record?.next || record.next === "0001-01-01T00:00:00Z") {
+    return (
+      <Typography variant="body2" color="text.secondary">
+        {record?.schedule === "@manually" ? "Manual trigger" : "Not scheduled"}
+      </Typography>
+    );
+  }
+  return <DateField source="next" showTime />;
 };
 
 const FieldGroup = ({ children }: { children: React.ReactNode }) => (
@@ -251,11 +270,15 @@ const StyledJsonField = ({ source, label }: { source: string; label?: string }) 
 
 const JobShow = (props: any) => (
   <Show
-    actions={<JobShowActions {...props} />}
+    actions={false}
     {...props}
     sx={{
       "& .RaShow-main": {
-        p: { xs: 2, md: 3 },
+        p: pagePadding,
+        width: "100%",
+        maxWidth: 1600,
+        mx: "auto",
+        boxSizing: "border-box",
       },
     }}
   >
@@ -286,7 +309,7 @@ const JobShow = (props: any) => (
                 <TextField source="schedule" />
               </Labeled>
               <Labeled label="Next Run">
-                <DateField source="next" showTime />
+                <NextRunField />
               </Labeled>
               <Labeled label="Status">
                 <StatusChip />

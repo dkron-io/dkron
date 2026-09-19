@@ -53,8 +53,25 @@ const ThemedLayout = (props: LayoutProps) => {
             appBar={AppBar}
             sidebar={StyledSidebar}
             sx={{
+                width: '100%',
+                minWidth: 0,
+                '&.RaLayout-root': {
+                    minWidth: 0,
+                },
+                '& .RaLayout-appFrame, & .RaLayout-contentWithSidebar': {
+                    width: '100%',
+                    minWidth: 0,
+                },
                 '& .RaLayout-content': {
                     backgroundColor: '#f7fafc',
+                    minWidth: 0,
+                    maxWidth: '100%',
+                    padding: 0,
+                    overflowX: 'hidden',
+                },
+                '& .RaLayout-content > *': {
+                    minWidth: 0,
+                    maxWidth: '100%',
                 },
             }}
         />

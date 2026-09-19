@@ -15,7 +15,6 @@ import {
     SimpleForm,
     TextInput,
     Toolbar,
-    TopToolbar,
     useInput,
     useRecordContext,
 } from 'react-admin';
@@ -44,6 +43,7 @@ import {
 } from '@mui/material';
 import { ProcessorsInput } from './ProcessorsInput';
 import { StringMap, StringMapInput } from './StringMapInput';
+import { pagePadding } from '../layout/Page';
 
 const executorChoices = [
     'shell', 'http', 'grpc', 'kafka', 'nats', 'rabbitmq', 'gcppubsub',
@@ -103,19 +103,6 @@ const getTimezones = () => {
 
 const timezoneChoices = getTimezones();
 
-const JobEditActions = () => (
-    <TopToolbar sx={{ mt: 2, mb: 1, gap: 1 }}>
-        <ListButton />
-        <ShowButton />
-    </TopToolbar>
-);
-
-const JobCreateActions = () => (
-    <TopToolbar sx={{ mt: 2, mb: 1 }}>
-        <ListButton />
-    </TopToolbar>
-);
-
 const SectionCard = ({
     icon: Icon,
     title,
@@ -127,7 +114,7 @@ const SectionCard = ({
     description: string;
     children: ReactNode;
 }) => (
-    <Card sx={{ mb: 3 }}>
+    <Card sx={{ mb: 3, width: '100%', boxSizing: 'border-box' }}>
         <CardContent>
             <Stack direction="row" spacing={1.5} alignItems="center">
                 <Box
@@ -208,9 +195,19 @@ const JobFormHeader = ({ creating }: { creating: boolean }) => {
                             : 'Update the schedule and execution settings without changing the job identity.'}
                     </Typography>
                 </Box>
-                <Stack direction="row" spacing={1} sx={{ ml: { sm: 'auto' }, flexWrap: 'wrap' }}>
-                    {executor && <Chip size="small" icon={<CodeIcon />} label={executor} />}
-                    {schedule && <Chip size="small" icon={<ScheduleIcon />} label={schedule} />}
+                <Stack
+                    spacing={1}
+                    alignItems={{ sm: 'flex-end' }}
+                    sx={{ ml: { sm: 'auto' }, flex: '0 0 auto' }}
+                >
+                    <Stack direction="row" spacing={1} sx={{ flexWrap: 'wrap' }}>
+                        {executor && <Chip size="small" icon={<CodeIcon />} label={executor} />}
+                        {schedule && <Chip size="small" icon={<ScheduleIcon />} label={schedule} />}
+                    </Stack>
+                    <Stack direction="row" spacing={0.5}>
+                        <ListButton />
+                        {!creating && <ShowButton />}
+                    </Stack>
                 </Stack>
             </Stack>
         </Box>
@@ -401,7 +398,12 @@ const JobForm = ({ creating }: { creating: boolean }) => (
         validate={validateJob}
         warnWhenUnsavedChanges
         toolbar={<JobFormToolbar creating={creating} />}
-        sx={{ maxWidth: 1120, mx: 'auto', '& > .MuiCardContent-root': { p: 0 } }}
+        sx={{
+            width: '100%',
+            maxWidth: 1120,
+            mx: 'auto',
+            '& > .MuiCardContent-root': { p: 0 },
+        }}
     >
         <JobFormHeader creating={creating} />
 
@@ -554,9 +556,12 @@ const JobForm = ({ creating }: { creating: boolean }) => (
 
 export const JobEdit = () => (
     <Edit
-        actions={<JobEditActions />}
+        actions={false}
         mutationMode="pessimistic"
-        sx={{ '& .RaEdit-main': { p: { xs: 2, md: 3 }, pt: 1 } }}
+        sx={{
+            '& .RaEdit-main': { p: pagePadding },
+            '& .RaEdit-card': { width: '100%', maxWidth: 1184, mx: 'auto' },
+        }}
     >
         <JobForm creating={false} />
     </Edit>
@@ -564,9 +569,12 @@ export const JobEdit = () => (
 
 export const JobCreate = () => (
     <Create
-        actions={<JobCreateActions />}
+        actions={false}
         mutationMode="pessimistic"
-        sx={{ '& .RaCreate-main': { p: { xs: 2, md: 3 }, pt: 1 } }}
+        sx={{
+            '& .RaCreate-main': { p: pagePadding },
+            '& .RaCreate-card': { width: '100%', maxWidth: 1184, mx: 'auto' },
+        }}
     >
         <JobForm creating />
     </Create>
