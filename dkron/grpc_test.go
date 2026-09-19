@@ -11,6 +11,7 @@ import (
 	"time"
 
 	typesv1 "github.com/distribworks/dkron/v4/gen/proto/types/v1"
+	"github.com/distribworks/dkron/v4/plugin"
 	"github.com/hashicorp/raft"
 	"github.com/hashicorp/serf/testutil"
 	"github.com/spf13/viper"
@@ -27,6 +28,15 @@ type executionDoneTestServer struct {
 	err     error
 	handler func(*typesv1.ExecutionDoneRequest) error
 	calls   atomic.Int32
+}
+
+type countingProcessor struct {
+	calls atomic.Int32
+}
+
+func (p *countingProcessor) Process(args *plugin.ProcessorArgs) *typesv1.Execution {
+	p.calls.Add(1)
+	return args.Execution
 }
 
 func (s *executionDoneTestServer) ExecutionDone(_ context.Context, req *typesv1.ExecutionDoneRequest) (*typesv1.ExecutionDoneResponse, error) {
@@ -330,6 +340,48 @@ func TestGRPCExecutionDoneFollowerOnlyAcknowledgesSuccessfulForward(t *testing.T
 		assert.Equal(t, []byte("forwarded"), response.Payload)
 		assert.Equal(t, 1, client.calls)
 	})
+}
+
+func TestGRPCExecutionDoneDuplicateSkipsCompletionSideEffects(t *testing.T) {
+	ctx := context.Background()
+	store, err := NewStore(getTestLogger(), otel.Tracer("test"))
+	require.NoError(t, err)
+	t.Cleanup(func() { _ = store.Shutdown() })
+
+	processor := &countingProcessor{}
+	job := scaffoldJob()
+	job.Name = "duplicate-completion"
+	job.Processors = map[string]plugin.Config{"counting": {}}
+	require.NoError(t, store.SetJob(ctx, job, false))
+
+	execution := &Execution{
+		JobName:    job.Name,
+		NodeName:   "agent-1",
+		StartedAt:  time.Now().UTC().Add(-time.Minute),
+		FinishedAt: time.Now().UTC(),
+		Success:    true,
+		Group:      time.Now().UnixNano(),
+		Attempt:    1,
+	}
+	_, err = store.SetExecutionDone(ctx, execution)
+	require.NoError(t, err)
+
+	server := &GRPCServer{
+		agent: &Agent{
+			Store:            store,
+			ProcessorPlugins: map[string]plugin.Processor{"counting": processor},
+			config:           DefaultConfig(),
+			isLeaderFn:       func() bool { return true },
+		},
+		logger: getTestLogger(),
+	}
+
+	response, err := server.ExecutionDone(ctx, &typesv1.ExecutionDoneRequest{Execution: execution.ToProto()})
+
+	require.NoError(t, err)
+	require.NotNil(t, response)
+	assert.Equal(t, []byte("duplicate"), response.Payload)
+	assert.Zero(t, processor.calls.Load())
 }
 
 func TestExecutionDoneRetriesCurrentLeaderAfterNotLeaderResponse(t *testing.T) {

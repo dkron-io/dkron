@@ -13,8 +13,10 @@ import (
 	"github.com/hashicorp/raft"
 	"github.com/hashicorp/serf/serf"
 	"github.com/sirupsen/logrus"
+	"github.com/tidwall/buntdb"
 	"go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc"
 	"golang.org/x/net/context"
+	"golang.org/x/sync/singleflight"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -44,8 +46,9 @@ type DkronGRPCServer interface {
 // GRPCServer is the local implementation of the gRPC server interface.
 type GRPCServer struct {
 	typesv1.DkronServer
-	agent  *Agent
-	logger *logrus.Entry
+	agent              *Agent
+	logger             *logrus.Entry
+	executionDoneGroup singleflight.Group
 }
 
 // NewGRPCServer creates and returns an instance of a DkronGRPCServer implementation
@@ -205,6 +208,34 @@ func (grpcs *GRPCServer) ExecutionDone(ctx context.Context, execDoneReq *typesv1
 		}, nil
 	}
 
+	execution := NewExecutionFromProto(execDoneReq.Execution)
+	result, err, _ := grpcs.executionDoneGroup.Do(execution.JobName+":"+execution.Key(), func() (interface{}, error) {
+		return grpcs.completeExecution(ctx, execDoneReq)
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	return result.(*typesv1.ExecutionDoneResponse), nil
+}
+
+func (grpcs *GRPCServer) completeExecution(ctx context.Context, execDoneReq *typesv1.ExecutionDoneRequest) (*typesv1.ExecutionDoneResponse, error) {
+	execution := NewExecutionFromProto(execDoneReq.Execution)
+	storedExecution, err := grpcs.agent.Store.GetExecution(ctx, execution.JobName, execution.Key())
+	if err == nil && !storedExecution.FinishedAt.IsZero() && !execution.FinishedAt.After(storedExecution.FinishedAt) {
+		grpcs.logger.WithFields(logrus.Fields{
+			"execution": execution.Key(),
+			"job":       execution.JobName,
+		}).Debug("grpc: ExecutionDone already committed")
+		return &typesv1.ExecutionDoneResponse{
+			From:    grpcs.agent.config.NodeName,
+			Payload: []byte("duplicate"),
+		}, nil
+	}
+	if err != nil && !errors.Is(err, buntdb.ErrNotFound) {
+		return nil, err
+	}
+
 	// This is the leader at this point, so process the execution, encode the value and apply the log to the cluster.
 	// Get the defined output types for the job, and call them
 	job, err := grpcs.agent.Store.GetJob(ctx, execDoneReq.Execution.JobName, nil)
@@ -241,7 +272,7 @@ func (grpcs *GRPCServer) ExecutionDone(ctx context.Context, execDoneReq *typesv1
 	}
 
 	// If the execution failed, retry it until retries limit (default: don't retry)
-	execution := NewExecutionFromProto(pbex)
+	execution = NewExecutionFromProto(pbex)
 	if !execution.Success &&
 		uint(execution.Attempt) < job.Retries+1 {
 		// Increment the attempt counter
