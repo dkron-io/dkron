@@ -225,7 +225,8 @@ func TestGRPCExecutionDone(t *testing.T) {
 		testExecution.Success = false
 		testExecution.Attempt = 1
 		testExecution.NodeName = a.config.NodeName // Use the agent's node name
-		testExecution.Output = brokenStreamErrorMsg
+		testExecution.FinishedAt = time.Time{}
+		testExecution.Output = ""
 
 		err = a.Store.SetJob(ctx, testJob, true)
 		require.NoError(t, err)
@@ -242,6 +243,8 @@ func TestGRPCExecutionDone(t *testing.T) {
 
 		// Call ExecutionDone with a failed execution that has a broken stream error
 		// This should trigger a retry since Retries > 0
+		testExecution.FinishedAt = time.Now().UTC()
+		testExecution.Output = brokenStreamErrorMsg
 		resp, err := a.GRPCServer.(*GRPCServer).ExecutionDone(ctx, &typesv1.ExecutionDoneRequest{
 			Execution: testExecution.ToProto(),
 		})
