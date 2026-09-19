@@ -138,6 +138,7 @@ type Agent struct {
 	pauseMu      sync.RWMutex
 
 	isLeaderFn func() bool
+	leaderFn   func() raft.ServerAddress
 }
 
 // ProcessorFactory is a function type that creates a new instance
@@ -702,6 +703,9 @@ func (a *Agent) LocalMember() serf.Member {
 
 // Leader is used to return the Raft leader
 func (a *Agent) Leader() raft.ServerAddress {
+	if a.leaderFn != nil {
+		return a.leaderFn()
+	}
 	if a.raft == nil {
 		return ""
 	}
