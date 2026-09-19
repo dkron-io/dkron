@@ -4,18 +4,72 @@ import (
 	"context"
 	"errors"
 	"io/ioutil"
+	"net"
 	"os"
+	"sync/atomic"
 	"testing"
 	"time"
 
 	typesv1 "github.com/distribworks/dkron/v4/gen/proto/types/v1"
+	"github.com/hashicorp/raft"
 	"github.com/hashicorp/serf/testutil"
 	"github.com/spf13/viper"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"go.opentelemetry.io/otel"
+	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )
+
+type executionDoneTestServer struct {
+	typesv1.UnimplementedDkronServer
+	err     error
+	handler func(*typesv1.ExecutionDoneRequest) error
+	calls   atomic.Int32
+}
+
+func (s *executionDoneTestServer) ExecutionDone(_ context.Context, req *typesv1.ExecutionDoneRequest) (*typesv1.ExecutionDoneResponse, error) {
+	s.calls.Add(1)
+	if s.err != nil {
+		return nil, s.err
+	}
+	if s.handler != nil {
+		if err := s.handler(req); err != nil {
+			return nil, err
+		}
+	}
+	return &typesv1.ExecutionDoneResponse{Payload: []byte("saved")}, nil
+}
+
+func startExecutionDoneTestServer(t *testing.T, server typesv1.DkronServer) string {
+	t.Helper()
+
+	listener, err := net.Listen("tcp", "127.0.0.1:0")
+	require.NoError(t, err)
+	grpcServer := grpc.NewServer()
+	typesv1.RegisterDkronServer(grpcServer, server)
+	go func() {
+		_ = grpcServer.Serve(listener)
+	}()
+	t.Cleanup(func() {
+		grpcServer.Stop()
+		_ = listener.Close()
+	})
+
+	return listener.Addr().String()
+}
+
+type executionDoneClientMock struct {
+	gRPCClientMock
+	err   error
+	calls int
+}
+
+func (m *executionDoneClientMock) ExecutionDone(string, *Execution) error {
+	m.calls++
+	return m.err
+}
 
 func TestGRPCExecutionDone(t *testing.T) {
 	dir, err := ioutil.TempDir("", "dkron-test")
@@ -226,6 +280,115 @@ func TestGRPCSetExecution_returns_error_when_not_leader(t *testing.T) {
 
 	// Then
 	require.ErrorIs(t, err, ErrNotLeader)
+}
+
+func TestGRPCExecutionDoneFollowerOnlyAcknowledgesSuccessfulForward(t *testing.T) {
+	execution := &Execution{
+		JobName:    "forwarded-completion",
+		NodeName:   "agent-1",
+		StartedAt:  time.Now().UTC().Add(-time.Minute),
+		FinishedAt: time.Now().UTC(),
+		Group:      time.Now().UnixNano(),
+	}
+
+	t.Run("forward failure is returned", func(t *testing.T) {
+		forwardErr := status.Error(codes.Unavailable, "leader changed")
+		client := &executionDoneClientMock{err: forwardErr}
+		server := &GRPCServer{
+			agent: &Agent{
+				GRPCClient: client,
+				isLeaderFn: func() bool { return false },
+				leaderFn:   func() raft.ServerAddress { return "old-leader:6868" },
+			},
+			logger: getTestLogger(),
+		}
+
+		response, err := server.ExecutionDone(context.Background(), &typesv1.ExecutionDoneRequest{Execution: execution.ToProto()})
+
+		require.Error(t, err)
+		assert.Equal(t, codes.Unavailable, status.Code(err))
+		assert.Contains(t, err.Error(), forwardErr.Error())
+		assert.Nil(t, response)
+		assert.Equal(t, 1, client.calls)
+	})
+
+	t.Run("successful forward is acknowledged", func(t *testing.T) {
+		client := &executionDoneClientMock{}
+		server := &GRPCServer{
+			agent: &Agent{
+				GRPCClient: client,
+				isLeaderFn: func() bool { return false },
+				leaderFn:   func() raft.ServerAddress { return "current-leader:6868" },
+			},
+			logger: getTestLogger(),
+		}
+
+		response, err := server.ExecutionDone(context.Background(), &typesv1.ExecutionDoneRequest{Execution: execution.ToProto()})
+
+		require.NoError(t, err)
+		require.NotNil(t, response)
+		assert.Equal(t, []byte("forwarded"), response.Payload)
+		assert.Equal(t, 1, client.calls)
+	})
+}
+
+func TestExecutionDoneRetriesCurrentLeaderAfterNotLeaderResponse(t *testing.T) {
+	ctx := context.Background()
+	store, err := NewStore(getTestLogger(), otel.Tracer("test"))
+	require.NoError(t, err)
+	t.Cleanup(func() { _ = store.Shutdown() })
+
+	job := scaffoldJob()
+	job.Name = "leader-change-completion"
+	require.NoError(t, store.SetJob(ctx, job, false))
+
+	execution := &Execution{
+		JobName:    job.Name,
+		NodeName:   "ephemeral-agent",
+		StartedAt:  time.Now().UTC().Add(-time.Minute),
+		FinishedAt: time.Time{},
+		Group:      time.Now().UnixNano(),
+		Attempt:    1,
+	}
+	_, err = store.SetExecution(ctx, execution)
+	require.NoError(t, err)
+
+	staleFollower := &executionDoneTestServer{err: ErrNotLeader}
+	staleFollowerAddr := startExecutionDoneTestServer(t, staleFollower)
+	currentLeader := &executionDoneTestServer{
+		handler: func(req *typesv1.ExecutionDoneRequest) error {
+			_, err := store.SetExecutionDone(ctx, NewExecutionFromProto(req.Execution))
+			return err
+		},
+	}
+	currentLeaderAddr := startExecutionDoneTestServer(t, currentLeader)
+
+	clientConfig := DefaultConfig()
+	clientConfig.AgentRunMaxRetries = 1
+	clientConfig.AgentRunRetryInitialInterval = 0
+	clientConfig.AgentRunRetryMaxInterval = 0
+	routingAgent := &Agent{
+		config: clientConfig,
+		leaderFn: func() raft.ServerAddress {
+			return raft.ServerAddress(currentLeaderAddr)
+		},
+	}
+	client := NewGRPCClient(nil, routingAgent, getTestLogger())
+
+	execution.FinishedAt = time.Now().UTC()
+	execution.Success = true
+	require.NoError(t, client.ExecutionDone(staleFollowerAddr, execution))
+	assert.Equal(t, int32(1), staleFollower.calls.Load())
+	assert.Equal(t, int32(1), currentLeader.calls.Load())
+
+	running, err := store.GetRunningExecutions(ctx, job.Name)
+	require.NoError(t, err)
+	assert.Empty(t, running)
+
+	stored, err := store.GetExecution(ctx, job.Name, execution.Key())
+	require.NoError(t, err)
+	assert.False(t, stored.FinishedAt.IsZero())
+	assert.True(t, stored.Success)
 }
 
 func TestIsRetryableError(t *testing.T) {

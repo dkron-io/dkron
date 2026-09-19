@@ -1,6 +1,7 @@
 package dkron
 
 import (
+	"errors"
 	"fmt"
 	"io"
 	"strings"
@@ -13,6 +14,7 @@ import (
 	"golang.org/x/net/context"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/keepalive"
 	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/types/known/emptypb"
 	"google.golang.org/protobuf/types/known/timestamppb"
@@ -52,6 +54,10 @@ func NewGRPCClient(dialOpt grpc.DialOption, agent *Agent, logger *logrus.Entry) 
 		dialOpt: []grpc.DialOption{
 			dialOpt,
 			grpc.WithBlock(),
+			grpc.WithKeepaliveParams(keepalive.ClientParameters{
+				Time:    5 * time.Minute,
+				Timeout: 20 * time.Second,
+			}),
 			grpc.WithStatsHandler(otelgrpc.NewClientHandler()), // Add tracing to gRPC client
 		},
 		agent:  agent,
@@ -74,6 +80,38 @@ func (grpcc *GRPCClient) Connect(addr string) (*grpc.ClientConn, error) {
 // ExecutionDone calls the ExecutionDone gRPC method
 func (grpcc *GRPCClient) ExecutionDone(addr string, execution *Execution) error {
 	defer metrics.MeasureSince([]string{"grpc", "call_execution_done"}, time.Now())
+
+	maxRetries, initialInterval, maxInterval := grpcc.retrySettings()
+	target := addr
+	var lastErr error
+
+	for attempt := 0; attempt <= maxRetries; attempt++ {
+		if attempt > 0 {
+			time.Sleep(retryBackoff(attempt, initialInterval, maxInterval))
+			if leader := grpcc.agent.Leader(); leader != "" {
+				target = string(leader)
+			}
+		}
+
+		lastErr = grpcc.executionDoneAttempt(target, execution)
+		if lastErr == nil {
+			return nil
+		}
+		if !isNotLeaderError(lastErr) && !isRetryableError(lastErr) {
+			return lastErr
+		}
+
+		grpcc.logger.WithError(lastErr).WithFields(logrus.Fields{
+			"attempt":        attempt + 1,
+			"total_attempts": maxRetries + 1,
+			"server_addr":    target,
+		}).Warn("grpc: ExecutionDone was not committed; retrying")
+	}
+
+	return fmt.Errorf("grpc: ExecutionDone failed after %d attempts: %w", maxRetries+1, lastErr)
+}
+
+func (grpcc *GRPCClient) executionDoneAttempt(addr string, execution *Execution) error {
 	var conn *grpc.ClientConn
 
 	conn, err := grpcc.Connect(addr)
@@ -89,11 +127,6 @@ func (grpcc *GRPCClient) ExecutionDone(addr string, execution *Execution) error 
 	d := typesv1.NewDkronClient(conn)
 	edr, err := d.ExecutionDone(context.Background(), &typesv1.ExecutionDoneRequest{Execution: execution.ToProto()})
 	if err != nil {
-		if err.Error() == fmt.Sprintf("rpc error: code = Unknown desc = %s", ErrNotLeader.Error()) {
-			grpcc.logger.Info("grpc: ExecutionDone forwarded to the leader")
-			return nil
-		}
-
 		grpcc.logger.WithError(err).WithFields(logrus.Fields{
 			"method":      "ExecutionDone",
 			"server_addr": addr,
@@ -107,6 +140,36 @@ func (grpcc *GRPCClient) ExecutionDone(addr string, execution *Execution) error 
 		"payload":     string(edr.Payload),
 	}).Debug("grpc: Response from method")
 	return nil
+}
+
+func (grpcc *GRPCClient) retrySettings() (int, time.Duration, time.Duration) {
+	if grpcc.agent == nil || grpcc.agent.config == nil {
+		return 0, 0, 0
+	}
+
+	return grpcc.agent.config.AgentRunMaxRetries,
+		grpcc.agent.config.AgentRunRetryInitialInterval,
+		grpcc.agent.config.AgentRunRetryMaxInterval
+}
+
+func retryBackoff(attempt int, initialInterval, maxInterval time.Duration) time.Duration {
+	backoff := initialInterval
+	for i := 1; i < attempt && backoff < maxInterval; i++ {
+		backoff *= 2
+	}
+	if backoff > maxInterval {
+		return maxInterval
+	}
+	return backoff
+}
+
+func isNotLeaderError(err error) bool {
+	if errors.Is(err, ErrNotLeader) {
+		return true
+	}
+
+	st, ok := status.FromError(err)
+	return ok && strings.Contains(st.Message(), ErrNotLeader.Error())
 }
 
 // GetJob calls GetJob gRPC method in the server
@@ -554,6 +617,12 @@ func (grpcc *GRPCClient) agentRunAttempt(addr string, job *typesv1.Job, executio
 	}
 
 	var first bool
+	var activeKey string
+	defer func() {
+		if activeKey != "" {
+			grpcc.agent.activeExecutions.Delete(activeKey)
+		}
+	}()
 	for {
 		ars, err := stream.Recv()
 
@@ -585,11 +654,15 @@ func (grpcc *GRPCClient) agentRunAttempt(addr string, job *typesv1.Job, executio
 		}
 
 		// Registers an active stream
-		grpcc.agent.activeExecutions.Store(ars.Execution.Key(), ars.Execution)
-		grpcc.logger.WithField("key", ars.Execution.Key()).Debug("grpc: received execution stream")
+		newActiveKey := ars.Execution.Key()
+		if activeKey != "" && activeKey != newActiveKey {
+			grpcc.agent.activeExecutions.Delete(activeKey)
+		}
+		activeKey = newActiveKey
+		grpcc.agent.activeExecutions.Store(activeKey, ars.Execution)
+		grpcc.logger.WithField("key", activeKey).Debug("grpc: received execution stream")
 
 		execution = ars.Execution
-		defer grpcc.agent.activeExecutions.Delete(execution.Key())
 
 		// Store the received execution in the raft log and store
 		if !first {

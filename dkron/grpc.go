@@ -16,6 +16,8 @@ import (
 	"go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc"
 	"golang.org/x/net/context"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/types/known/emptypb"
 )
@@ -190,8 +192,17 @@ func (grpcs *GRPCServer) ExecutionDone(ctx context.Context, execDoneReq *typesv1
 	// Forward the request to the leader in case current node is not the leader.
 	if !grpcs.agent.IsLeader() {
 		addr := grpcs.agent.Leader()
-		grpcs.agent.GRPCClient.ExecutionDone(string(addr), NewExecutionFromProto(execDoneReq.Execution))
-		return nil, ErrNotLeader
+		if err := grpcs.agent.GRPCClient.ExecutionDone(string(addr), NewExecutionFromProto(execDoneReq.Execution)); err != nil {
+			if isNotLeaderError(err) || isRetryableError(err) {
+				return nil, status.Errorf(codes.Unavailable, "grpc: failed forwarding ExecutionDone to leader %q: %v", addr, err)
+			}
+			return nil, fmt.Errorf("grpc: failed forwarding ExecutionDone to leader %q: %w", addr, err)
+		}
+
+		return &typesv1.ExecutionDoneResponse{
+			From:    string(addr),
+			Payload: []byte("forwarded"),
+		}, nil
 	}
 
 	// This is the leader at this point, so process the execution, encode the value and apply the log to the cluster.

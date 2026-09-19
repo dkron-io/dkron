@@ -5,8 +5,8 @@ import (
 	"time"
 
 	"github.com/armon/circbuf"
-	"github.com/hashicorp/go-metrics"
 	typesv1 "github.com/distribworks/dkron/v4/gen/proto/types/v1"
+	"github.com/hashicorp/go-metrics"
 	"github.com/sirupsen/logrus"
 	"google.golang.org/protobuf/types/known/timestamppb"
 )
@@ -84,6 +84,7 @@ func (as *AgentServer) AgentRun(req *typesv1.AgentRunRequest, stream typesv1.Age
 	if executor, ok := as.agent.ExecutorPlugins[jex]; ok {
 		as.logger.WithField("plugin", jex).Debug("grpc_agent: calling executor plugin")
 		runningExecutions.Store(execution.GetGroup(), execution)
+		defer runningExecutions.Delete(execution.GetGroup())
 		out, err := executor.Execute(&typesv1.ExecuteRequest{
 			JobName: job.Name,
 			Config:  exc,
@@ -114,8 +115,6 @@ func (as *AgentServer) AgentRun(req *typesv1.AgentRunRequest, stream typesv1.Age
 	execution.FinishedAt = timestamppb.Now()
 	execution.Success = success
 	execution.Output = output.Bytes()
-
-	runningExecutions.Delete(execution.GetGroup())
 
 	// Send the final execution
 	if err := stream.Send(&typesv1.AgentRunStream{
