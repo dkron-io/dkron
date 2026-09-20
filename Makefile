@@ -39,7 +39,7 @@ release:
 		-v `pwd`:/go/src/$(PACKAGE_NAME) \
 		-w /go/src/$(PACKAGE_NAME) \
 		goreleaser/goreleaser-cross:${GOLANG_CROSS_VERSION} \
-		--clean --skip=validate --timeout=1h
+		--clean --skip=validate --timeout=1h --parallelism=1
 
 .PHONY: clean
 clean:
