@@ -64,6 +64,10 @@ func initConfig() error {
 	if err := viper.Unmarshal(config); err != nil {
 		return fmt.Errorf("config: Error unmarshalling config: %s", err)
 	}
+	_, endpointEnvSet := os.LookupEnv("DKRON_WEBHOOK_ENDPOINT")
+	if !viper.IsSet("webhook-endpoint") && !endpointEnvSet {
+		config.WebhookEndpoint = viper.GetString("webhook-url")
+	}
 
 	cliTags := viper.GetStringSlice("tag")
 	var tags map[string]string
