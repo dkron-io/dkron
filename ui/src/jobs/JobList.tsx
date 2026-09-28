@@ -52,7 +52,12 @@ const JobBulkActionButtons = () => (
 
 const JobPagination = (props: any) => <Pagination rowsPerPageOptions={[5, 10, 25, 50, 100]} {...props} />;
 
-const NextRunField = ({ source, label }: { source: string; label?: string }) => {
+interface NextRunFieldProps {
+    source: string;
+    label?: string;
+}
+
+const NextRunField = ({ source, label }: NextRunFieldProps) => {
     const record = useRecordContext();
 
     if (!record?.[source] || record[source] === '0001-01-01T00:00:00Z') {
@@ -187,7 +192,7 @@ const JobList = (props: any) => {
                     <DateField source="last_error" showTime />
                     <EnabledField label="Enabled" />
                     <NumberField source="retries" sortable={false} />
-                    <StatusField />
+                    <StatusField label="Status" />
                     <NextRunField source="next" label="Next run" />
                     <EditButton/>
                 </StyledDatagrid>

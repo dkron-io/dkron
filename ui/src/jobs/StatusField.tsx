@@ -4,7 +4,12 @@ import UntriggeredIcon from '@mui/icons-material/Schedule';
 import { Tooltip, Chip } from '@mui/material';
 import { useRecordContext } from 'react-admin';
 
-const StatusField = () => {
+interface StatusFieldProps {
+    label?: string;
+}
+
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+const StatusField = (_props: StatusFieldProps) => {
     const record = useRecordContext();
 
     if (!record) return null;
