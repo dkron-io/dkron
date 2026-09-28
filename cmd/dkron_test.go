@@ -81,6 +81,27 @@ func TestInitConfigWebhookEndpoint(t *testing.T) {
 			yaml:  "webhook-url: " + legacy,
 			flags: []string{"--webhook-endpoint="},
 		},
+		{
+			name: "empty current environment disables legacy config",
+			yaml: "webhook-url: " + legacy,
+			env:  map[string]string{"DKRON_WEBHOOK_ENDPOINT": ""},
+		},
+		{
+			name:  "empty current environment disables legacy flag",
+			flags: []string{"--webhook-url=" + legacy},
+			env:   map[string]string{"DKRON_WEBHOOK_ENDPOINT": ""},
+		},
+		{
+			name: "empty current environment disables legacy environment",
+			env:  map[string]string{"DKRON_WEBHOOK_ENDPOINT": "", "DKRON_WEBHOOK_URL": legacy},
+		},
+		{
+			name:  "current flag overrides empty current environment",
+			yaml:  "webhook-url: " + legacy,
+			flags: []string{"--webhook-endpoint=" + endpoint},
+			env:   map[string]string{"DKRON_WEBHOOK_ENDPOINT": ""},
+			want:  endpoint,
+		},
 	}
 
 	for _, tt := range tests {
@@ -94,8 +115,10 @@ func TestInitConfigWebhookEndpoint(t *testing.T) {
 			})
 			logrus.StandardLogger().ReplaceHooks(make(logrus.LevelHooks))
 			viper.Reset()
-			t.Setenv("DKRON_WEBHOOK_URL", "")
-			t.Setenv("DKRON_WEBHOOK_ENDPOINT", "")
+			for _, name := range []string{"DKRON_WEBHOOK_URL", "DKRON_WEBHOOK_ENDPOINT"} {
+				t.Setenv(name, "")
+				require.NoError(t, os.Unsetenv(name))
+			}
 			for name, value := range tt.env {
 				t.Setenv(name, value)
 			}
