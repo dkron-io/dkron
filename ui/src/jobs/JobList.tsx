@@ -3,6 +3,7 @@ import {
     TextField,
     NumberField,
     DateField,
+    WrapperField,
     EditButton,
     Filter,
     TextInput,
@@ -192,8 +193,12 @@ const JobList = (props: any) => {
                     <DateField source="last_error" showTime />
                     <EnabledField label="Enabled" />
                     <NumberField source="retries" sortable={false} />
-                    <StatusField label="Status" />
-                    <NextRunField source="next" label="Next run" />
+                    <WrapperField label="Status" source="status">
+                        <StatusField />
+                    </WrapperField>
+                    <WrapperField label="Next run" source="next">
+                        <NextRunField source="next" />
+                    </WrapperField>
                     <EditButton/>
                 </StyledDatagrid>
             </List>
