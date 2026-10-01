@@ -342,7 +342,7 @@ const JobFormToolbar = ({ creating }: { creating: boolean }) => {
                     sx={{ ml: 'auto' }}
                 />
             )}
-            {!creating && <DeleteButton sx={{ ml: 'auto' }} />}
+            {!creating && <DeleteButton mutationMode="pessimistic" sx={{ ml: 'auto' }} />}
         </Toolbar>
     );
 };

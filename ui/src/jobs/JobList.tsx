@@ -46,7 +46,7 @@ const JobBulkActionButtons = () => (
     <Fragment>
         <BulkRunButton />
         <BulkToggleButton />
-        <BulkDeleteButton />
+        <BulkDeleteButton mutationMode="pessimistic" />
     </Fragment>
 );
 

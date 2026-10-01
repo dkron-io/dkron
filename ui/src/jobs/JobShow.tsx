@@ -224,7 +224,7 @@ const JobHeader = () => {
           <RunButton />
           <ToggleButton />
           <EditButton />
-          <DeleteButton />
+          <DeleteButton mutationMode="pessimistic" />
         </Box>
       </Box>
     </Box>
