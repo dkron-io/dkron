@@ -4,6 +4,7 @@ import {
   NumberField,
   DateField,
   EditButton,
+  DeleteButton,
   BooleanField,
   Show,
   TabbedShowLayout,
@@ -219,10 +220,11 @@ const JobHeader = () => {
         <Box>
           <StatusChip />
         </Box>
-        <Box sx={{ display: "flex", gap: 0.5, ml: { sm: 0.5 } }}>
+        <Box sx={{ display: "flex", flexWrap: "wrap", gap: 0.5, ml: { sm: 0.5 } }}>
           <RunButton />
           <ToggleButton />
           <EditButton />
+          <DeleteButton />
         </Box>
       </Box>
     </Box>
