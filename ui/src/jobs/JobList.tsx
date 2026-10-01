@@ -46,7 +46,7 @@ const JobBulkActionButtons = () => (
     <Fragment>
         <BulkRunButton />
         <BulkToggleButton />
-        <BulkDeleteButton />
+        <BulkDeleteButton mutationMode="pessimistic" />
     </Fragment>
 );
 
@@ -118,7 +118,13 @@ const StyledDatagrid = styled(Datagrid)(({ theme }) => ({
     '& .RaDatagrid-rowCell': {
         borderBottom: '1px solid #e2e8f0',
     },
-    minWidth: 1280,
+    // Only the table scrolls; the bulk toolbar must stay outside the scroll container.
+    '& .RaDatagrid-tableWrapper': {
+        overflowX: 'auto',
+    },
+    '& .RaDatagrid-table': {
+        minWidth: 1280,
+    },
 }));
 
 const JobList = (props: any) => {
@@ -171,7 +177,8 @@ const JobList = (props: any) => {
                     '& .RaList-content': {
                         boxShadow: 'none',
                         borderRadius: 0,
-                        overflowX: 'auto',
+                        // The bulk toolbar slides above the grid when jobs are selected.
+                        overflow: 'visible',
                     },
                 }}
             >

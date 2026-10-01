@@ -5,6 +5,7 @@ import {
     Button as RaButton,
     Create,
     DateTimeInput,
+    DeleteButton,
     Edit,
     ListButton,
     NumberInput,
@@ -322,6 +323,7 @@ const JobFormToolbar = ({ creating }: { creating: boolean }) => {
                 borderTop: '1px solid',
                 borderColor: 'divider',
                 gap: 1,
+                flexWrap: 'wrap',
             }}
         >
             <SaveButton
@@ -340,6 +342,7 @@ const JobFormToolbar = ({ creating }: { creating: boolean }) => {
                     sx={{ ml: 'auto' }}
                 />
             )}
+            {!creating && <DeleteButton mutationMode="pessimistic" sx={{ ml: 'auto' }} />}
         </Toolbar>
     );
 };
