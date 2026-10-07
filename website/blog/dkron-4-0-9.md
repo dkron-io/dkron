@@ -80,11 +80,23 @@ The "forbid" concurrency policy now correctly survives node restarts. Previously
 
 ## Upgrading to v4.0.9
 
-Dkron v4.0.9 is designed to be a straightforward upgrade from v4.0.8. As always, we recommend:
+### Breaking change notice
+
+Starting with v4.0.9, Dkron uses renamed gRPC service definitions that are not compatible with v4.0.8 and earlier nodes. Mixed-version clusters with nodes on `<= v4.0.8` and `>= v4.0.9` are not supported during the transition.
+
+If you are upgrading from v4.0.8 or earlier, upgrade every Dkron component together:
+
+- Server nodes
+- Agent nodes
+- External executor plugins built against the older gRPC service names
+
+Do not use a rolling upgrade from v4.0.8 to v4.0.9+. Instead, plan a coordinated full-cluster upgrade or use a backup-and-restore migration path.
+
+For all other upgrade planning, we recommend:
 
 1. Backing up your data store before upgrading
 2. Testing the upgrade in a non-production environment first
-3. Following a rolling upgrade pattern for production clusters
+3. Reviewing the [upgrade methods documentation](/docs/usage/upgrade/) for the correct procedure for your target version
 
 ## What's Next?
 
