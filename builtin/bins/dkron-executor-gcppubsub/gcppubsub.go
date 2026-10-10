@@ -16,6 +16,19 @@ import (
 type GCPPubSub struct {
 }
 
+func (g *GCPPubSub) ConfigSchema() (string, error) {
+	return `{
+  "type": "object",
+  "required": ["project", "topic"],
+  "properties": {
+    "project": {"type": "string", "title": "Project"},
+    "topic": {"type": "string", "title": "Topic"},
+    "data": {"type": "string", "title": "Base64 data"},
+    "attributes": {"type": "string", "title": "Attributes", "description": "JSON object serialized as a string."}
+  }
+}`, nil
+}
+
 const (
 	configProjectName    = "project"
 	configTopicName      = "topic"
