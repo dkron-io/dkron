@@ -3,9 +3,13 @@ package dkron
 import (
 	"context"
 	"errors"
+	"io"
 	"io/ioutil"
 	"net"
+	"net/http"
+	"net/http/httptest"
 	"os"
+	"sync"
 	"sync/atomic"
 	"testing"
 	"time"
@@ -530,4 +534,70 @@ func TestIsRetryableError(t *testing.T) {
 			assert.Equal(t, tt.expected, result, "isRetryableError(%v) = %v, want %v", tt.err, result, tt.expected)
 		})
 	}
+}
+
+func TestGRPCExecutionDoneWebhookNotifyOnChange(t *testing.T) {
+	var calls []string
+	var mu sync.Mutex
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		body, _ := io.ReadAll(r.Body)
+		mu.Lock()
+		calls = append(calls, string(body))
+		mu.Unlock()
+	}))
+	defer ts.Close()
+
+	dir := t.TempDir()
+	viper.Reset()
+	ip1, returnFn1 := testutil.TakeIP()
+	defer returnFn1()
+
+	c := DefaultConfig()
+	c.BindAddr = ip1.String()
+	c.NodeName = "test-grpc-notify"
+	c.Server = true
+	c.LogLevel = logLevel
+	c.BootstrapExpect = 1
+	c.DevMode = true
+	c.DataDir = dir
+	c.HTTPAddr = "127.0.0.1:0"
+	c.WebhookEndpoint = ts.URL
+	c.WebhookPayload = "{{.JobName}} {{.Success}}"
+	c.WebhookNotifyOn = WebhookNotifyChange
+
+	a := NewAgent(c)
+	_ = a.Start()
+	defer func() { _ = a.Stop() }()
+	require.Eventually(t, a.IsLeader, 30*time.Second, 10*time.Millisecond, "agent did not become leader")
+
+	ctx := context.Background()
+	job := &Job{
+		Name:           "flaky",
+		Schedule:       "@manually",
+		Executor:       "shell",
+		ExecutorConfig: map[string]string{"command": "/bin/true"},
+		Disabled:       true,
+	}
+	require.NoError(t, a.Store.SetJob(ctx, job, true))
+
+	rc := NewGRPCClient(nil, a, getTestLogger())
+	run := func(success bool) []string {
+		now := time.Now()
+		ex := &Execution{
+			JobName: job.Name, Group: now.UnixNano(), StartedAt: now, FinishedAt: now.Add(time.Millisecond),
+			NodeName: "testNode", Success: success, Attempt: 1,
+		}
+		require.NoError(t, rc.ExecutionDone(a.advertiseRPCAddr(), ex))
+		mu.Lock()
+		defer mu.Unlock()
+		got := calls
+		calls = nil
+		return got
+	}
+
+	assert.Empty(t, run(true), "a new job that works stays quiet")
+	assert.Empty(t, run(true), "still working")
+	assert.Equal(t, []string{"flaky false"}, run(false), "regression")
+	assert.Empty(t, run(false), "still broken")
+	assert.Equal(t, []string{"flaky true"}, run(true), "fixed")
 }

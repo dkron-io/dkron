@@ -96,6 +96,7 @@ dkron agent [flags]
       --ui                              Enable the web UI on this node. The node must be server. (default true)
       --webhook-endpoint string         Webhook endpoint to call for notifications
       --webhook-headers strings         Headers to use when calling the webhook URL. Can be specified multiple times
+      --webhook-notify-on string        Which finished executions call the webhook: always, success, failure, or change (the result differs from the job's previous run) (default "always")
       --webhook-payload string          Body of the POST request to send on webhook call
       --webhook-url string              Webhook url to call for notifications. Deprecated, use webhook-endpoint instead
 ```

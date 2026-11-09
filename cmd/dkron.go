@@ -68,6 +68,9 @@ func initConfig() error {
 	if !viper.IsSet("webhook-endpoint") && !endpointEnvSet {
 		config.WebhookEndpoint = viper.GetString("webhook-url")
 	}
+	if err := config.ValidateNotifications(); err != nil {
+		return err
+	}
 
 	cliTags := viper.GetStringSlice("tag")
 	var tags map[string]string

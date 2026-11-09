@@ -135,3 +135,52 @@ func TestInitConfigWebhookEndpoint(t *testing.T) {
 		})
 	}
 }
+
+func TestInitConfigWebhookNotifyOn(t *testing.T) {
+	tests := []struct {
+		name    string
+		yaml    string
+		flags   []string
+		env     map[string]string
+		want    string
+		wantErr bool
+	}{
+		{name: "default", want: dkron.WebhookNotifyAlways},
+		{name: "config", yaml: "webhook-notify-on: failure", want: dkron.WebhookNotifyFailure},
+		{name: "flag", flags: []string{"--webhook-notify-on=change"}, want: dkron.WebhookNotifyChange},
+		{name: "environment", env: map[string]string{"DKRON_WEBHOOK_NOTIFY_ON": "success"}, want: dkron.WebhookNotifySuccess},
+		{name: "invalid", yaml: "webhook-notify-on: failures", wantErr: true},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			oldConfig, oldFile := config, cfgFile
+			oldHooks := logrus.StandardLogger().Hooks
+			t.Cleanup(func() {
+				config, cfgFile = oldConfig, oldFile
+				logrus.StandardLogger().ReplaceHooks(oldHooks)
+				viper.Reset()
+			})
+			logrus.StandardLogger().ReplaceHooks(make(logrus.LevelHooks))
+			viper.Reset()
+			for name, value := range tt.env {
+				t.Setenv(name, value)
+			}
+
+			config = dkron.DefaultConfig()
+			cfgFile = filepath.Join(t.TempDir(), "dkron.yml")
+			require.NoError(t, os.WriteFile(cfgFile, []byte("log-level: error\n"+tt.yaml), 0600))
+			flags := dkron.ConfigFlagSet()
+			require.NoError(t, flags.Parse(tt.flags))
+			require.NoError(t, viper.BindPFlags(flags))
+
+			err := initConfig()
+			if tt.wantErr {
+				require.ErrorContains(t, err, "webhook-notify-on")
+				return
+			}
+			require.NoError(t, err)
+			require.Equal(t, tt.want, config.WebhookNotifyOn)
+		})
+	}
+}

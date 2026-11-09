@@ -300,16 +300,33 @@ func (grpcs *GRPCServer) completeExecution(ctx context.Context, execDoneReq *typ
 		}, nil
 	}
 
-	exg, err := grpcs.agent.Store.GetExecutionGroup(ctx, execution, &ExecutionOptions{
-		Timezone: job.GetTimeLocation(),
-	})
-	if err != nil {
-		grpcs.logger.WithError(err).WithField("group", execution.Group).Error("grpc: Error getting execution group.")
-		return nil, err
+	// webhook-notify-on=change also compares this execution with the job's previous run, so it
+	// reads all of the job's executions once and takes the group from the same read.
+	var exg []*Execution
+	var previousRun *Execution
+	opts := &ExecutionOptions{Timezone: job.GetTimeLocation()}
+	if grpcs.agent.config.WebhookNotifyOn == WebhookNotifyChange {
+		all, err := grpcs.agent.Store.GetExecutions(ctx, execution.JobName, opts)
+		if err != nil {
+			grpcs.logger.WithError(err).WithField("group", execution.Group).Error("grpc: Error getting execution group.")
+			return nil, err
+		}
+		for _, ex := range all {
+			if ex.Group == execution.Group {
+				exg = append(exg, ex)
+			}
+		}
+		previousRun = PreviousRun(all, execution.Group)
+	} else {
+		exg, err = grpcs.agent.Store.GetExecutionGroup(ctx, execution, opts)
+		if err != nil {
+			grpcs.logger.WithError(err).WithField("group", execution.Group).Error("grpc: Error getting execution group.")
+			return nil, err
+		}
 	}
 
 	// Send notification
-	if err := SendPostNotifications(grpcs.agent.config, execution, exg, job, grpcs.logger); err != nil {
+	if err := SendPostNotifications(grpcs.agent.config, execution, exg, job, previousRun, grpcs.logger); err != nil {
 		return nil, err
 	}
 

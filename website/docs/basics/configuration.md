@@ -38,6 +38,7 @@ Config file will be loaded from the following paths:
 # webhook-url: https://hooks.slack.com/services/XXXXXX/XXXXXXX/XXXXXXXXXXXXXXXXXXXX
 # webhook-payload: "payload={\"text\": \"{{.Report}}\", \"channel\": \"#foo\"}"
 # webhook-headers: Content-Type:application/x-www-form-urlencoded
+# webhook-notify-on: failure
 # mail-host: email-smtp.eu-west-1.amazonaws.com
 # mail-port: 25
 # mail-username": mailuser
@@ -99,6 +100,7 @@ Here's a detailed explanation of the key configuration parameters:
 | `webhook-endpoint` | Endpoint URL to call for webhook notifications. |
 | `webhook-payload` | Body of the POST request to send when calling the webhook. |
 | `webhook-headers` | Headers to use when calling the webhook URL. Can be specified multiple times. |
+| `webhook-notify-on` | Which finished executions call the webhook: `always` (default), `success`, `failure`, or `change`. `change` calls it only when an execution's result differs from the job's previous run (a regression or a fix); a job's first run calls it only if it fails. Earlier attempts of a retried execution are not a previous run. |
 | `mail-host` | Mail server hostname for sending notifications. |
 | `mail-port` | Mail server port. |
 | `mail-username` | Username for mail server authentication. |
