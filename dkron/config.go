@@ -155,6 +155,10 @@ type Config struct {
 	// WebhookHeaders are the headers to use when calling the webhook for notifications.
 	WebhookHeaders []string `mapstructure:"webhook-headers"`
 
+	// WebhookNotifyOn selects which finished executions call the webhook:
+	// always (default), success, failure, or change (the result differs from the job's previous run).
+	WebhookNotifyOn string `mapstructure:"webhook-notify-on"`
+
 	// DogStatsdAddr is the address of a dogstatsd instance. If provided,
 	// metrics will be sent to that instance.
 	DogStatsdAddr string `mapstructure:"dog-statsd-addr"`
@@ -221,6 +225,7 @@ func DefaultConfig() *Config {
 		LogLevel:                     "info",
 		RPCPort:                      DefaultRPCPort,
 		MailSubjectPrefix:            "[Dkron]",
+		WebhookNotifyOn:              WebhookNotifyAlways,
 		Tags:                         tags,
 		DataDir:                      "dkron.data",
 		Datacenter:                   "dc1",
@@ -335,6 +340,7 @@ Format there: https://golang.org/pkg/time/#ParseDuration`)
 	cmdFlags.String("webhook-url", "", "Webhook url to call for notifications. Deprecated, use webhook-endpoint instead")
 	cmdFlags.String("webhook-payload", "", "Body of the POST request to send on webhook call")
 	cmdFlags.StringSlice("webhook-headers", []string{}, "Headers to use when calling the webhook URL. Can be specified multiple times")
+	cmdFlags.String("webhook-notify-on", c.WebhookNotifyOn, "Which finished executions call the webhook: always, success, failure, or change (the result differs from the job's previous run)")
 	cmdFlags.String("cronitor-endpoint", "", "Cronitor endpoint to call for notifications")
 
 	// Observability
@@ -358,6 +364,25 @@ Format there: https://golang.org/pkg/time/#ParseDuration`)
 
 // normalizeAddrs normalizes Addresses and AdvertiseAddrs to always be
 // initialized and have sane defaults.
+// Values of webhook-notify-on.
+const (
+	WebhookNotifyAlways  = "always"
+	WebhookNotifySuccess = "success"
+	WebhookNotifyFailure = "failure"
+	WebhookNotifyChange  = "change"
+)
+
+// ValidateNotifications returns an error for a webhook-notify-on value that is not one of the
+// WebhookNotify* values. An empty value means always, as for a Config not built by DefaultConfig.
+func (c *Config) ValidateNotifications() error {
+	switch c.WebhookNotifyOn {
+	case "", WebhookNotifyAlways, WebhookNotifySuccess, WebhookNotifyFailure, WebhookNotifyChange:
+		return nil
+	}
+	return fmt.Errorf("config: invalid webhook-notify-on %q: must be one of %s, %s, %s, %s",
+		c.WebhookNotifyOn, WebhookNotifyAlways, WebhookNotifySuccess, WebhookNotifyFailure, WebhookNotifyChange)
+}
+
 func (c *Config) normalizeAddrs() error {
 	if c.BindAddr != "" {
 		ipStr, err := ParseSingleIPTemplate(c.BindAddr)

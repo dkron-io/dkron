@@ -308,8 +308,19 @@ func (grpcs *GRPCServer) completeExecution(ctx context.Context, execDoneReq *typ
 		return nil, err
 	}
 
+	// webhook-notify-on=change compares this execution with the job's previous run
+	var previousRun *Execution
+	if grpcs.agent.config.WebhookNotifyOn == WebhookNotifyChange {
+		all, err := grpcs.agent.Store.GetExecutions(ctx, job.Name, &ExecutionOptions{Timezone: job.GetTimeLocation()})
+		if err != nil {
+			grpcs.logger.WithError(err).WithField("job", job.Name).Error("grpc: Error getting executions for notification.")
+			return nil, err
+		}
+		previousRun = PreviousRun(all, execution.Group)
+	}
+
 	// Send notification
-	if err := SendPostNotifications(grpcs.agent.config, execution, exg, job, grpcs.logger); err != nil {
+	if err := SendPostNotifications(grpcs.agent.config, execution, exg, job, previousRun, grpcs.logger); err != nil {
 		return nil, err
 	}
 

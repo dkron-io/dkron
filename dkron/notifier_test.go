@@ -122,7 +122,7 @@ func TestNotifier_callExecutionWebhook(t *testing.T) {
 	}
 
 	log := getTestLogger()
-	err := SendPostNotifications(c, &Execution{}, []*Execution{}, &Job{}, log)
+	err := SendPostNotifications(c, &Execution{}, []*Execution{}, &Job{}, nil, log)
 	assert.NoError(t, err)
 }
 
@@ -142,12 +142,82 @@ func TestNotifier_callExecutionWebhookHostHeader(t *testing.T) {
 	}
 
 	log := getTestLogger()
-	err := SendPostNotifications(c, &Execution{}, []*Execution{}, &Job{}, log)
+	err := SendPostNotifications(c, &Execution{}, []*Execution{}, &Job{}, nil, log)
 	assert.NoError(t, err)
 
 	if exp != got {
 		t.Errorf("Exp: %s\nGot: %s", exp, got)
 	}
+}
+
+func TestNotifier_webhookNotifyOn(t *testing.T) {
+	calls := 0
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		calls++
+	}))
+	defer ts.Close()
+
+	ok := &Execution{Group: 2, Success: true}
+	failed := &Execution{Group: 2, Success: false}
+	prevOK := &Execution{Group: 1, Success: true}
+	prevFailed := &Execution{Group: 1, Success: false}
+
+	tests := []struct {
+		notifyOn  string
+		execution *Execution
+		previous  *Execution
+		want      bool
+	}{
+		{"", ok, nil, true},
+		{WebhookNotifyAlways, ok, prevOK, true},
+		{WebhookNotifyAlways, failed, prevFailed, true},
+		{WebhookNotifySuccess, ok, nil, true},
+		{WebhookNotifySuccess, failed, nil, false},
+		{WebhookNotifyFailure, failed, nil, true},
+		{WebhookNotifyFailure, ok, nil, false},
+		{WebhookNotifyChange, failed, prevOK, true},      // regression
+		{WebhookNotifyChange, ok, prevFailed, true},      // fix
+		{WebhookNotifyChange, ok, prevOK, false},         // still working
+		{WebhookNotifyChange, failed, prevFailed, false}, // still broken
+		{WebhookNotifyChange, failed, nil, true},         // a new job that fails
+		{WebhookNotifyChange, ok, nil, false},            // a new job that works
+	}
+	for _, tt := range tests {
+		c := &Config{
+			WebhookEndpoint: ts.URL,
+			WebhookPayload:  `{"text": "{{.Report}}"}`,
+			WebhookNotifyOn: tt.notifyOn,
+		}
+		calls = 0
+		err := SendPostNotifications(c, tt.execution, []*Execution{tt.execution}, &Job{}, tt.previous, getTestLogger())
+		require.NoError(t, err)
+		assert.Equal(t, tt.want, calls == 1, "notify-on=%q success=%t previous=%v", tt.notifyOn, tt.execution.Success, tt.previous)
+	}
+}
+
+func TestPreviousRun(t *testing.T) {
+	at := func(s int) time.Time { return time.Date(2026, 1, 1, 0, 0, s, 0, time.UTC) }
+	g1node1 := &Execution{Group: 1, NodeName: "n1", FinishedAt: at(10), Success: true}
+	g1node2 := &Execution{Group: 1, NodeName: "n2", FinishedAt: at(12), Success: false}
+	g2try1 := &Execution{Group: 2, Attempt: 1, FinishedAt: at(20), Success: false}
+	g2try2 := &Execution{Group: 2, Attempt: 2, FinishedAt: at(25), Success: true}
+	g3running := &Execution{Group: 3, StartedAt: at(30)}
+
+	all := []*Execution{g2try2, g1node1, g3running, g2try1, g1node2}
+	assert.Nil(t, PreviousRun(all, 1), "the first run has no previous run")
+	assert.Same(t, g1node2, PreviousRun(all, 2), "latest finished execution of the run before")
+	assert.Same(t, g2try2, PreviousRun(all, 3), "an earlier attempt in the same group never counts")
+	assert.Same(t, g2try2, PreviousRun(all, 4), "an unfinished run is skipped")
+	assert.Nil(t, PreviousRun(nil, 2))
+}
+
+func TestConfig_ValidateNotifications(t *testing.T) {
+	for _, v := range []string{"", WebhookNotifyAlways, WebhookNotifySuccess, WebhookNotifyFailure, WebhookNotifyChange} {
+		assert.NoError(t, (&Config{WebhookNotifyOn: v}).ValidateNotifications(), v)
+	}
+	err := (&Config{WebhookNotifyOn: "on-failure"}).ValidateNotifications()
+	assert.ErrorContains(t, err, `invalid webhook-notify-on "on-failure"`)
+	assert.Equal(t, WebhookNotifyAlways, DefaultConfig().WebhookNotifyOn)
 }
 
 func TestNotifier_sendExecutionEmail(t *testing.T) {
@@ -199,7 +269,7 @@ func TestNotifier_sendExecutionEmail(t *testing.T) {
 	}
 
 	log := getTestLogger()
-	err := SendPostNotifications(c, ex1, exg, job, log)
+	err := SendPostNotifications(c, ex1, exg, job, nil, log)
 	require.NoError(t, err, "Failed to send email notification")
 
 	// Give Mailpit a moment to process the email

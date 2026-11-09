@@ -53,8 +53,10 @@ func SendPreNotifications(config *Config, execution *Execution, exGroup []*Execu
 	return werr
 }
 
-// Send sends the notifications using any configured method
-func SendPostNotifications(config *Config, execution *Execution, exGroup []*Execution, job *Job, logger *logrus.Entry) error {
+// SendPostNotifications sends the notifications using any configured method. previousRun is the
+// latest execution of the job's previous run (see PreviousRun), or nil; only webhook-notify-on=change
+// reads it.
+func SendPostNotifications(config *Config, execution *Execution, exGroup []*Execution, job *Job, previousRun *Execution, logger *logrus.Entry) error {
 	n := &notifier{
 		logger: logger,
 
@@ -76,7 +78,7 @@ func SendPostNotifications(config *Config, execution *Execution, exGroup []*Exec
 		}
 	}
 
-	if n.Config.WebhookEndpoint != "" && n.Config.WebhookPayload != "" {
+	if n.Config.WebhookEndpoint != "" && n.Config.WebhookPayload != "" && n.webhookWanted(previousRun) {
 		if err := n.callExecutionWebhook(); err != nil {
 			werr = multierror.Append(werr, fmt.Errorf("notifier: error posting notification: %w", err))
 		}
@@ -243,6 +245,41 @@ func (n *notifier) callExecutionWebhook() error {
 	}).Debug("notifier: Webhook call response")
 
 	return nil
+}
+
+// webhookWanted applies webhook-notify-on to this execution. For change, the execution's result is
+// compared with the previous run's; a job's first run notifies only when it fails, so a new job that
+// works stays quiet.
+func (n *notifier) webhookWanted(previousRun *Execution) bool {
+	switch n.Config.WebhookNotifyOn {
+	case WebhookNotifySuccess:
+		return n.Execution.Success
+	case WebhookNotifyFailure:
+		return !n.Execution.Success
+	case WebhookNotifyChange:
+		if previousRun == nil {
+			return !n.Execution.Success
+		}
+		return previousRun.Success != n.Execution.Success
+	default:
+		return true
+	}
+}
+
+// PreviousRun returns the latest finished execution of the run before the one in execution group
+// group: the execution with the latest FinishedAt among those of earlier groups, or nil. Earlier
+// attempts of a retried execution share its group, so they never count as the previous run.
+func PreviousRun(executions []*Execution, group int64) *Execution {
+	var prev *Execution
+	for _, ex := range executions {
+		if ex.Group >= group || ex.FinishedAt.IsZero() {
+			continue
+		}
+		if prev == nil || ex.Group > prev.Group || (ex.Group == prev.Group && ex.FinishedAt.After(prev.FinishedAt)) {
+			prev = ex
+		}
+	}
+	return prev
 }
 
 func (n *notifier) statusString() string {
