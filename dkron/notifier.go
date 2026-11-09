@@ -262,6 +262,7 @@ func (n *notifier) webhookWanted(previousRun *Execution) bool {
 		}
 		return previousRun.Success != n.Execution.Success
 	default:
+		// always, or an unvalidated value from a Config built outside initConfig: behave as before
 		return true
 	}
 }

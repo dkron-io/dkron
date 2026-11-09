@@ -568,9 +568,7 @@ func TestGRPCExecutionDoneWebhookNotifyOnChange(t *testing.T) {
 	a := NewAgent(c)
 	_ = a.Start()
 	defer func() { _ = a.Stop() }()
-	for !a.IsLeader() {
-		time.Sleep(10 * time.Millisecond)
-	}
+	require.Eventually(t, a.IsLeader, 30*time.Second, 10*time.Millisecond, "agent did not become leader")
 
 	ctx := context.Background()
 	job := &Job{
