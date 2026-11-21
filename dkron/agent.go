@@ -243,6 +243,7 @@ func (a *Agent) Start() error {
 		grpcServer := grpc.NewServer(opts...)
 		as := NewAgentServer(a, a.logger)
 		typesv1.RegisterAgentServiceServer(grpcServer, as)
+		registerLegacyAgentServer(grpcServer, as)
 		go func() {
 			if err := grpcServer.Serve(l); err != nil {
 				a.logger.Fatal(err)

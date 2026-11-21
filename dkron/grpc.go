@@ -64,9 +64,11 @@ func (grpcs *GRPCServer) Serve(lis net.Listener) error {
 	serverOpts := grpc.StatsHandler(otelgrpc.NewServerHandler()) // Add otel support
 	grpcServer := grpc.NewServer(serverOpts)
 	typesv1.RegisterDkronServer(grpcServer, grpcs)
+	registerLegacyDkronServer(grpcServer, grpcs)
 
 	as := NewAgentServer(grpcs.agent, grpcs.logger)
 	typesv1.RegisterAgentServiceServer(grpcServer, as)
+	registerLegacyAgentServer(grpcServer, as)
 	go grpcServer.Serve(lis)
 
 	return nil

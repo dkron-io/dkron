@@ -59,6 +59,7 @@ func NewGRPCClient(dialOpt grpc.DialOption, agent *Agent, logger *logrus.Entry) 
 				Timeout: 20 * time.Second,
 			}),
 			grpc.WithStatsHandler(otelgrpc.NewClientHandler()), // Add tracing to gRPC client
+			grpc.WithChainUnaryInterceptor(legacyDkronFallbackInterceptor),
 		},
 		agent:  agent,
 		logger: logger,
@@ -608,13 +609,15 @@ func (grpcc *GRPCClient) agentRunAttempt(addr string, job *typesv1.Job, executio
 
 	// Streaming call
 	a := typesv1.NewAgentServiceClient(conn)
-	stream, err := a.AgentRun(context.Background(), &typesv1.AgentRunRequest{
+	req := &typesv1.AgentRunRequest{
 		Job:       job,
 		Execution: execution,
-	})
+	}
+	stream, err := a.AgentRun(context.Background(), req)
 	if err != nil {
 		return err
 	}
+	legacyTried := false
 
 	var first bool
 	var activeKey string
@@ -625,6 +628,16 @@ func (grpcc *GRPCClient) agentRunAttempt(addr string, job *typesv1.Job, executio
 	}()
 	for {
 		ars, err := stream.Recv()
+
+		// Agents on v4.0.8 or older only know the types.Agent service name.
+		if err != nil && activeKey == "" && !legacyTried && status.Code(err) == codes.Unimplemented {
+			legacyTried = true
+			legacyStream, legacyErr := openLegacyAgentRun(context.Background(), conn, req)
+			if legacyErr == nil {
+				stream = legacyStream
+				continue
+			}
+		}
 
 		// Stream ends
 		if err == io.EOF {
