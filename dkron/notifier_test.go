@@ -150,6 +150,45 @@ func TestNotifier_callExecutionWebhookHostHeader(t *testing.T) {
 	}
 }
 
+func TestNotifier_webhookHeaderValues(t *testing.T) {
+	var host string
+	var header http.Header
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		host = r.Host
+		header = r.Header
+	}))
+	defer ts.Close()
+
+	headers := []string{
+		"Host: dkron.io:8080",
+		"X-Dkron-Url: https://dkron.io:8080/ui",
+		"no colon",
+		"",
+	}
+	log := getTestLogger()
+
+	c := &Config{
+		WebhookEndpoint: ts.URL,
+		WebhookPayload:  "payload",
+		WebhookHeaders:  headers,
+	}
+	err := SendPostNotifications(c, &Execution{}, []*Execution{}, &Job{}, log)
+	assert.NoError(t, err)
+	assert.Equal(t, "dkron.io:8080", host)
+	assert.Equal(t, "https://dkron.io:8080/ui", header.Get("X-Dkron-Url"))
+
+	host, header = "", nil
+	c = &Config{
+		PreWebhookEndpoint: ts.URL,
+		PreWebhookPayload:  "payload",
+		PreWebhookHeaders:  headers,
+	}
+	err = SendPreNotifications(c, &Execution{}, nil, &Job{}, log)
+	assert.NoError(t, err)
+	assert.Equal(t, "dkron.io:8080", host)
+	assert.Equal(t, "https://dkron.io:8080/ui", header.Get("X-Dkron-Url"))
+}
+
 func TestNotifier_sendExecutionEmail(t *testing.T) {
 	// This test requires Mailpit to be running for email testing.
 	// Mailpit is a local SMTP server that captures emails without sending them.
