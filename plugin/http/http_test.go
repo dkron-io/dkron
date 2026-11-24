@@ -41,6 +41,16 @@ func newTestServer() *httptest.Server {
 			w.Write([]byte("hello"))
 			return
 
+		// Return the value of the X-Test header as the response body
+		case "/header":
+			w.Write([]byte(r.Header.Get("X-Test")))
+			return
+
+		// Return the Host header as the response body
+		case "/host":
+			w.Write([]byte(r.Host))
+			return
+
 		// Echo POST body back to request
 		case "/echo":
 			if r.Method == http.MethodPost {
@@ -78,6 +88,9 @@ func TestExecute(t *testing.T) {
 		{"Expected GET Response", map[string]string{"method": "GET", "url": fmt.Sprintf("%s/hello", ts.URL), "expectCode": "200"}, []byte("hello"), false},
 		{"Expected POST Response", map[string]string{"method": "POST", "url": fmt.Sprintf("%s/echo", ts.URL), "body": "this is a post body", "expectBody": "this is a post body", "expectCode": "200"}, []byte("this is a post body"), false},
 		{"Unexpected POST Response is error", map[string]string{"method": "POST", "url": fmt.Sprintf("%s/echo", ts.URL), "body": "this is a post body", "expectBody": "not this", "expectCode": "200"}, []byte("this is a post body"), true},
+		{"Header value with colons", map[string]string{"method": "GET", "url": fmt.Sprintf("%s/header", ts.URL), "headers": `["X-Test: https://example.com:8080/a"]`, "expectCode": "200"}, []byte("https://example.com:8080/a"), false},
+		{"Host header with port", map[string]string{"method": "GET", "url": fmt.Sprintf("%s/host", ts.URL), "headers": `["Host: dkron.io:8080"]`, "expectCode": "200"}, []byte("dkron.io:8080"), false},
+		{"Header without colon is ignored", map[string]string{"method": "GET", "url": fmt.Sprintf("%s/header", ts.URL), "headers": `["X-Test", "X-Test: value"]`, "expectCode": "200"}, []byte("Error: ignoring header without a colon\nvalue"), false},
 	}
 
 	for _, tt := range tests {

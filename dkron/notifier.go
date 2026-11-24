@@ -177,22 +177,35 @@ func (n *notifier) auth() smtp.Auth {
 	return auth
 }
 
+// setHeaders adds headers in "Name: value" form to the request. The value can
+// contain colons. Headers without a colon are skipped.
+func (n *notifier) setHeaders(req *http.Request, headers []string) {
+	for _, h := range headers {
+		if h == "" {
+			continue
+		}
+		name, value, ok := strings.Cut(h, ":")
+		if !ok {
+			// The header is not logged, it can hold a credential.
+			n.logger.Warning("notifier: Ignoring webhook header without a colon")
+			continue
+		}
+		value = strings.TrimSpace(value)
+		if strings.EqualFold(name, "host") {
+			req.Host = value
+		} else {
+			req.Header.Set(name, value)
+		}
+	}
+}
+
 func (n *notifier) callPreExecutionWebhook() error {
 	out := n.buildTemplate(n.Config.PreWebhookPayload)
 	req, err := http.NewRequest("POST", n.Config.PreWebhookEndpoint, out)
 	if err != nil {
 		return err
 	}
-	for _, h := range n.Config.PreWebhookHeaders {
-		if h != "" {
-			kv := strings.Split(h, ":")
-			if strings.EqualFold(kv[0], "host") {
-				req.Host = strings.TrimSpace(kv[1])
-			} else {
-				req.Header.Set(kv[0], strings.TrimSpace(kv[1]))
-			}
-		}
-	}
+	n.setHeaders(req, n.Config.PreWebhookHeaders)
 
 	client := &http.Client{}
 	resp, err := client.Do(req)
@@ -217,16 +230,7 @@ func (n *notifier) callExecutionWebhook() error {
 	if err != nil {
 		return err
 	}
-	for _, h := range n.Config.WebhookHeaders {
-		if h != "" {
-			kv := strings.Split(h, ":")
-			if strings.EqualFold(kv[0], "host") {
-				req.Host = strings.TrimSpace(kv[1])
-			} else {
-				req.Header.Set(kv[0], strings.TrimSpace(kv[1]))
-			}
-		}
-	}
+	n.setHeaders(req, n.Config.WebhookHeaders)
 
 	client := &http.Client{}
 	resp, err := client.Do(req)

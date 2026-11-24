@@ -118,8 +118,17 @@ func (s *HTTP) ExecuteImpl(args *types.ExecuteRequest) ([]byte, error) {
 
 	for _, h := range headers {
 		if h != "" {
-			kv := strings.Split(h, ":")
-			req.Header.Set(kv[0], strings.TrimSpace(kv[1]))
+			name, value, ok := strings.Cut(h, ":")
+			if !ok {
+				output.Write([]byte("Error: ignoring header without a colon\n"))
+				continue
+			}
+			value = strings.TrimSpace(value)
+			if strings.EqualFold(name, "host") {
+				req.Host = value
+			} else {
+				req.Header.Set(name, value)
+			}
 		}
 	}
 	if debug {
