@@ -186,7 +186,8 @@ func (n *notifier) setHeaders(req *http.Request, headers []string) {
 		}
 		name, value, ok := strings.Cut(h, ":")
 		if !ok {
-			n.logger.WithField("header", h).Warning("notifier: Ignoring webhook header without a colon")
+			// The header is not logged, it can hold a credential.
+			n.logger.Warning("notifier: Ignoring webhook header without a colon")
 			continue
 		}
 		value = strings.TrimSpace(value)

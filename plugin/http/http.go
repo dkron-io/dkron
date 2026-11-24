@@ -120,10 +120,15 @@ func (s *HTTP) ExecuteImpl(args *types.ExecuteRequest) ([]byte, error) {
 		if h != "" {
 			name, value, ok := strings.Cut(h, ":")
 			if !ok {
-				output.Write([]byte(fmt.Sprintf("Error: ignoring header without a colon: %s\n", h)))
+				output.Write([]byte("Error: ignoring header without a colon\n"))
 				continue
 			}
-			req.Header.Set(name, strings.TrimSpace(value))
+			value = strings.TrimSpace(value)
+			if strings.EqualFold(name, "host") {
+				req.Host = value
+			} else {
+				req.Header.Set(name, value)
+			}
 		}
 	}
 	if debug {
